@@ -1,12 +1,12 @@
 # Session Memory - Basic Custom E-Commerce
-> Last updated: 2026-08-27 00:45
+> Last updated: 2026-08-27 01:30
 
 ## Session Context
 - **Project**: Basic Custom E-Commerce
 - **Profile**: `~/Desktop/CS/Projects/06-basic-ecom.md`
-- **Branch**: master — Phase 2 `43035bf`, Phase 3 `23bb05a`, Phase 4 `448979a`
+- **Branch**: master — Ph2 `43035bf`, Ph3 `23bb05a`, Ph4 `448979a`, Ph5 `4c31125`
 - **Status**: active — Planning.md APPROVED 2026-08-26. Phase 2 complete, Phase 3 next.
-- **Focus**: Phase 5 — categories, products, variations, stock (spec §27).
+- **Focus**: Phase 6 — session cart, checkout, order creation (spec §27).
 
 ## Current Tasks
 - [x] Phase 0 Intake — name, work mode, deploy target, database
@@ -17,7 +17,8 @@
 - [x] **Phase 2 — Laravel 12 foundation** (installed, configured, verified, committed)
 - [x] **Phase 3 — Database**: 10 tables, 4 enums, 10 models, 8 factories, 3 seeders
 - [x] **Phase 4 — Core Laravel MVC**: routes, middleware, controllers, Form Requests, Blade layouts + components, error views, Money support
-- [ ] **Phase 5 — Product**: categories, products, variations, stock admin CRUD + storefront listing
+- [x] **Phase 5 — Product**: admin CRUD for categories/products/variations + stock, storefront catalogue + detail
+- [ ] **Phase 6 — Cart & Checkout**: session cart, variation selection, customer details, address, order creation
 - [ ] **OQ-13 blocks Phase 8b** — read `shipment/submit` + `shipment/pay` payloads from `github.com/easyparcel/OpenAPI` and record them. Booking code cannot be written first (§3)
 - [ ] **OQ-03 first** — is EasyParcel on the Open API (OAuth) or legacy Connect (flat key)? Changes Phase 8 design + table count
 - [ ] Verify ToyyibPay `getBillTransactions` field names against the official reference (human, browser)
@@ -92,6 +93,10 @@
 - Scout verified: **Laravel 12 left bug-fix support 2026-08-13**; Laravel 13 is current; local PHP is 8.4.10 so `config.platform.php = "8.3"` is load-bearing; Composer 2.8.10 present; Bootstrap 5.3.8 current.
 - Applied 5 patterns from `11-pattern-library.md`: atomic race-free guard, integer minor units, variants-without-EAV, soft-deletes/unique-index, encrypted secrets at rest.
 
+### Bugs found by tests in Phase 5 (both real, both fixed)
+- `Product::getRouteKeyName()` returns `slug` for pretty storefront URLs, so **every admin product route was binding by slug**. Admin routes now pin `{product:id}` — renaming a product must not change its admin URL.
+- `{variation:id}` turned on Laravel's scoped bindings, which looked for `Product::variations()`; the relation is `variants()`. Route param renamed to `{variant}`.
+
 ### Bugs found by tests in Phase 4 (both real, both fixed)
 - View composer registered only on `layouts.*` → `$storeName` undefined in child views that render it in their own section. Now registered on `['layouts.*','storefront.*','admin.*']`.
 - `components/alerts.blade.php` assumed `$errors` exists. An unmatched URL never passes through the `web` group, so `ShareErrorsFromSession` never ran and **every 404 returned a 500**. Component is now defensive.
@@ -104,7 +109,10 @@
 - Test DB `basic_ecom_test` exists on port 3307 for the MariaDB run.
 - **76 tests / 160 assertions green on SQLite AND MariaDB 10.4.28.** Pint clean, audit clean. Routes smoke-tested live: `/` `/order-status` `/admin/login` `/up` 200, `/nope` 404, guest `/admin` → 302 to login, `X-Request-Id` present.
 - Working now: admin login (throttled, is_active in credentials, session regeneration), dashboard with 4 counters, public order lookup gated on order-no + matching email, Bootstrap 5.3.8 vendored locally, `App\Support\Money` for integer sen.
-- Next: **Phase 5 — Product.** Category + product + variation admin CRUD, stock editing, storefront catalogue listing and product detail with the variant selector.
+- **101 tests / 237 assertions green on SQLite AND MariaDB 10.4.28.**
+- Live smoke test passed: `/products`, category filter, both seeded products, admin auth-gate, admin catalogue screens after login.
+- Working now: admin category/product/variation CRUD with deactivate-not-delete, stock adjustment (logged), image upload to the `uploads` disk (public/uploads, no storage:link), storefront listing with cheapest-variant price and the per-combination detail table.
+- Next: **Phase 6 — Cart & Checkout.** `CartService` (session, keyed by variant_id), add/update/remove, `CheckoutRequest`, order creation in a transaction with server-side totals and the order_items snapshot.
 
 ### Key Context for Next Session
 - **The payment path fails closed on purpose.** If payments don't settle in testing, check `Planning.md` §11.A.6 before assuming a bug.

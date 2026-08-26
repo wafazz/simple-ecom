@@ -2,11 +2,10 @@
 
 > **Status**: Active | **Last Updated**: 2026-08-26 | **Maintainer**: Iris / CoreSentinel
 
-> **Planning.md approved 2026-08-26. Phases 2–3 complete** (commits `43035bf`, `23bb05a`).
-> The database layer — migrations, enums, models, relationships, factories, seeders — is
-> built and tested. Controllers, Blade views and the two integration services are still
-> **planned targets**; they land in Phases 4–9. Sections are filled in as each phase
-> lands — see §5.
+> **Planning.md approved 2026-08-26. Phases 2–5 complete** (`43035bf`, `23bb05a`, `448979a`, `4c31125`).
+> Database, core MVC and the product catalogue are built and tested. Cart, checkout,
+> the two integration services and the remaining admin screens are still **planned
+> targets**; they land in Phases 6–9. Sections are filled in as each phase lands — see §5.
 
 All `§` references point at **`Prompt.txt`** (36 sections) unless prefixed "Planning".
 
@@ -223,6 +222,8 @@ Runtime: the Laravel 12 skeleton only. Dev: `phpunit/phpunit ^11.5`, `laravel/pi
 | 2026-08-26 | **REQ-013 added**: client moved EasyParcel shipment booking, AWB and tracking into scope. Adds `shipments` (10th table), `ShipmentController`, `ShipmentStatus`, booking/reconciliation design, and 5 new open questions (OQ-12…OQ-16). Estimate ~9 → ~11 days | `Planning.md`, `docs/documentation.md` | Iris |
 | 2026-08-26 | Implementation **halted** at the §35 approval gate | — | Iris |
 | 2026-08-26 | **Planning.md APPROVED.** Phase 2 — Laravel 12.68.0 foundation: Vite removed, cipher AES-256-GCM, file/file/sync drivers, config/services.php | `composer.json`, `config/*`, `bootstrap/app.php`, `app/Providers/AppServiceProvider.php` | Iris (`43035bf`) |
+| 2026-08-27 | **Phase 4 — Core MVC.** Routes, AssignRequestId + EnsureAdminIsActive middleware, admin auth, order lookup, Blade layouts/components, error views, Money support, Bootstrap 5.3.8 vendored | `routes/web.php`, `app/Http/*`, `resources/views/*`, `app/Support/Money.php` | Iris (`448979a`) |
+| 2026-08-27 | **Phase 5 — Product.** Admin CRUD for categories/products/variations, stock adjustment, image upload; storefront catalogue + detail | `app/Http/Controllers/Admin/*`, `app/Http/Controllers/ProductController.php`, `app/Http/Requests/*`, `resources/views/admin/*`, `resources/views/storefront/*` | Iris (`4c31125`) |
 | 2026-08-27 | **Phase 3 — Database.** 10 tables, 4 backed enums, 10 Eloquent models, 8 factories, 3 seeders. Atomic guards implemented and tested: stock decrement, paid transition, shipment booking | `database/migrations/*`, `app/Enums/*`, `app/Models/*`, `database/factories/*`, `database/seeders/*`, `tests/Feature/*` | Iris (`23bb05a`) |
 
 ---
