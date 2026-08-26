@@ -1,12 +1,12 @@
 # Session Memory - Basic Custom E-Commerce
-> Last updated: 2026-08-27 00:05
+> Last updated: 2026-08-27 00:45
 
 ## Session Context
 - **Project**: Basic Custom E-Commerce
 - **Profile**: `~/Desktop/CS/Projects/06-basic-ecom.md`
-- **Branch**: master — Phase 2 `43035bf`, Phase 3 `23bb05a`
+- **Branch**: master — Phase 2 `43035bf`, Phase 3 `23bb05a`, Phase 4 `448979a`
 - **Status**: active — Planning.md APPROVED 2026-08-26. Phase 2 complete, Phase 3 next.
-- **Focus**: Phase 4 — routes, controllers, Blade views, validation, middleware (spec §27).
+- **Focus**: Phase 5 — categories, products, variations, stock (spec §27).
 
 ## Current Tasks
 - [x] Phase 0 Intake — name, work mode, deploy target, database
@@ -16,7 +16,8 @@
 - [x] **Planning.md APPROVED** by client 2026-08-26
 - [x] **Phase 2 — Laravel 12 foundation** (installed, configured, verified, committed)
 - [x] **Phase 3 — Database**: 10 tables, 4 enums, 10 models, 8 factories, 3 seeders
-- [ ] **Phase 4 — Core Laravel MVC**: routes, controllers, Blade layouts, validation, middleware
+- [x] **Phase 4 — Core Laravel MVC**: routes, middleware, controllers, Form Requests, Blade layouts + components, error views, Money support
+- [ ] **Phase 5 — Product**: categories, products, variations, stock admin CRUD + storefront listing
 - [ ] **OQ-13 blocks Phase 8b** — read `shipment/submit` + `shipment/pay` payloads from `github.com/easyparcel/OpenAPI` and record them. Booking code cannot be written first (§3)
 - [ ] **OQ-03 first** — is EasyParcel on the Open API (OAuth) or legacy Connect (flat key)? Changes Phase 8 design + table count
 - [ ] Verify ToyyibPay `getBillTransactions` field names against the official reference (human, browser)
@@ -91,12 +92,19 @@
 - Scout verified: **Laravel 12 left bug-fix support 2026-08-13**; Laravel 13 is current; local PHP is 8.4.10 so `config.platform.php = "8.3"` is load-bearing; Composer 2.8.10 present; Bootstrap 5.3.8 current.
 - Applied 5 patterns from `11-pattern-library.md`: atomic race-free guard, integer minor units, variants-without-EAV, soft-deletes/unique-index, encrypted secrets at rest.
 
+### Bugs found by tests in Phase 4 (both real, both fixed)
+- View composer registered only on `layouts.*` → `$storeName` undefined in child views that render it in their own section. Now registered on `['layouts.*','storefront.*','admin.*']`.
+- `components/alerts.blade.php` assumed `$errors` exists. An unmatched URL never passes through the `web` group, so `ShareErrorsFromSession` never ran and **every 404 returned a 500**. Component is now defensive.
+- Also corrected: `Setting::all()/value()` clobbered Eloquent's own API (incompatible static signature) → renamed to `cached()/get()/getInt()`. And a CSRF test asserted the wrong property — Laravel 11+ stores `validateCsrfTokens(except:)` in the STATIC `$neverVerify`, not the instance `$except`.
+
 ### Where We Left Off
-- **Phases 2 and 3 done and committed** (`43035bf`, `23bb05a`).
+- **Phases 2, 3 and 4 done and committed** (`43035bf`, `23bb05a`, `448979a`).
 - **32 tests / 73 assertions green** on SQLite; the 24 guard tests **re-run green against real MariaDB 10.4.28** (Planning §16 requires this — SQLite does not tell the truth about guarded UPDATEs). Pint clean, `composer audit` clean.
 - Proven by test, not assumed: variant combination uniqueness incl. the two-option-less-variants NULL trap · atomic stock decrement refusing to oversell · idempotent paid transition · shipment double-booking rejected · `needs_reconciliation` never retryable · tokens encrypted at rest and hidden from `toArray()`.
 - Test DB `basic_ecom_test` exists on port 3307 for the MariaDB run.
-- Next: **Phase 4 — Core Laravel MVC.** Routes, controllers, Blade layout + components, validation, middleware (`EnsureAdminIsActive`, `AssignRequestId`).
+- **76 tests / 160 assertions green on SQLite AND MariaDB 10.4.28.** Pint clean, audit clean. Routes smoke-tested live: `/` `/order-status` `/admin/login` `/up` 200, `/nope` 404, guest `/admin` → 302 to login, `X-Request-Id` present.
+- Working now: admin login (throttled, is_active in credentials, session regeneration), dashboard with 4 counters, public order lookup gated on order-no + matching email, Bootstrap 5.3.8 vendored locally, `App\Support\Money` for integer sen.
+- Next: **Phase 5 — Product.** Category + product + variation admin CRUD, stock editing, storefront catalogue listing and product detail with the variant selector.
 
 ### Key Context for Next Session
 - **The payment path fails closed on purpose.** If payments don't settle in testing, check `Planning.md` §11.A.6 before assuming a bug.

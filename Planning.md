@@ -1,6 +1,6 @@
 # Planning.md — Basic Custom E-Commerce (Laravel 12 / PHP 8.3)
 
-> **Status**: **APPROVED 2026-08-26.** Phases 2–3 complete; Phase 4 (Core Laravel MVC) next.
+> **Status**: **APPROVED 2026-08-26.** Phases 2–4 complete; Phase 5 (Product) next.
 > **Last Updated**: 2026-08-26
 > **Spec source**: `Prompt.txt` — *CoreSentinel Development Instruction — Laravel 12 Basic Custom E-Commerce* (36 sections)
 > **Agent**: Iris / CoreSentinel · Init Protocol `05-init-protocol.md`
@@ -972,7 +972,7 @@ The client confirmed **MySQL 8.0**, so `DB_CONNECTION=mysql` is correct. Recorde
 | **1** | **Planning.md** — this document. No application code. | ✅ **Approved 2026-08-26** |
 | 2 | **Laravel Foundation** — install Laravel 12 (no starter kit), configure environment, database connection, base application structure | ✅ **Done** — Laravel 12.68.0, commit `43035bf`. Vite removed, cipher AES-256-GCM, file/file/sync drivers, boots clean |
 | 3 | **Database** — migrations, Eloquent models, relationships, seeders | ✅ **Done** — commit `23bb05a`. 10 tables, 4 enums, 10 models, 8 factories, 3 seeders. 32 tests green; 24 guard tests re-verified on real MariaDB |
-| 4 | **Core Laravel MVC** — routes, controllers, Blade layouts/views, validation, middleware | `Planned` |
+| 4 | **Core Laravel MVC** — routes, controllers, Blade layouts/views, validation, middleware | ✅ **Done** — commit `448979a`. 76 tests green on SQLite + MariaDB. Admin auth, order lookup, Money support, Bootstrap vendored |
 | 5 | **Product** — categories, products, variations, stock (REQ-001/002/008) | `Planned` |
 | 6 | **Cart & Checkout** — session cart, product + variation selection, customer details, shipping address, order creation (REQ-003/004) | `Planned` |
 | 7 | **Payment** — verified ToyyibPay integration (REQ-005) | `Planned` — **gated on §11.A.6**; fails closed by design |
