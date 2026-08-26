@@ -49,6 +49,10 @@ class PurchaseFlowTest extends TestCase
         Setting::put('pickup_postcode', '50000');
         Setting::put('pickup_state', 'MY-14');
         Setting::put('flat_shipping_fee_minor', '1000');
+        // Delivery is priced from the store's table. Pinned here so the
+        // arithmetic below is readable rather than implied.
+        Setting::put('ship_west_first_minor', '800');
+        Setting::put('ship_west_next_minor', '300');
 
         IntegrationToken::create([
             'provider' => 'easyparcel',
@@ -104,12 +108,15 @@ class PurchaseFlowTest extends TestCase
 
         $this->get(route('cart.index'))->assertOk()->assertSee('M / Black')->assertSee('M / White');
 
-        // 3. Quote shipping for the delivery address.
+        // 3. See the delivery charge for the address — the store's own weight
+        //    table, so no courier call is involved.
         $this->postJson(route('shipping.quote'), ['postcode' => '11900', 'state' => 'MY-07'])
             ->assertOk()
-            ->assertJsonPath('quotes.0.service_id', 'SVC-A');
+            ->assertJsonPath('zone', 'West Malaysia');
 
-        // 4. Check out. 2×3000 + 1×3200 = 9200, plus 1084 shipping = 10284.
+        // 4. Check out. 2×3000 + 1×3200 = 9200 goods. Three 200 g items is
+        //    600 g, which rounds up to one chargeable kilo → RM8.00 to a West
+        //    Malaysia address. 9200 + 800 = 10000.
         $this->post(route('checkout.store'), [
             'customer_name' => 'Aisha Rahman',
             'customer_email' => 'aisha@example.test',
@@ -124,9 +131,9 @@ class PurchaseFlowTest extends TestCase
 
         $order = Order::firstOrFail();
         $this->assertSame(9200, $order->subtotal_minor);
-        $this->assertSame(1084, $order->shipping_fee_minor);
-        $this->assertSame(10284, $order->grand_total_minor);
-        $this->assertSame('api', $order->shipping_rate_source);
+        $this->assertSame(800, $order->shipping_fee_minor);
+        $this->assertSame(10000, $order->grand_total_minor);
+        $this->assertSame('weight', $order->shipping_rate_source);
         $this->assertCount(2, $order->items);
 
         // Stock is checked, not held.
@@ -182,9 +189,10 @@ class PurchaseFlowTest extends TestCase
 
         $order = Order::firstOrFail();
 
-        // Order placed at the flat rate rather than lost.
-        $this->assertSame('flat', $order->shipping_rate_source);
-        $this->assertSame(1000, $order->shipping_fee_minor);
+        // Delivery is priced from the store's own table, so an unreachable
+        // courier API cannot stop an order being placed or priced at all.
+        $this->assertSame('weight', $order->shipping_rate_source);
+        $this->assertGreaterThan(0, $order->shipping_fee_minor);
 
         // The bill could not be created, so the customer is told plainly and
         // the order survives for a retry — nothing is marked paid.

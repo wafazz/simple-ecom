@@ -54,6 +54,9 @@ composer audit          # dependency advisories — run before every release
 Full detail in `Planning.md`; these are the ones that cause silent damage if broken.
 
 - **Money is integer sen**, column suffix `_minor`. No float touches the payment path.
+- **Delivery is priced from the store's own weight table**, not a courier quote —
+  four admin-set figures, part kilos rounded up. EasyParcel quotes are the *booking
+  cost*, not the customer's price; the difference is the store's margin.
 - **Never trust a payment callback.** Re-query ToyyibPay server-side and match amount +
   external reference (§11.A.5).
 - **Stock decrements via one guarded `UPDATE`**, affected-row count asserted. Never

@@ -16,7 +16,10 @@ class ProductVariantFactory extends Factory
             'sku' => strtoupper(Str::random(10)),
             'price_minor' => fake()->numberBetween(1000, 20000),
             'stock_qty' => fake()->numberBetween(1, 50),
-            'weight_g' => fake()->numberBetween(100, 2000),
+            // FIXED, not random. Delivery is priced by weight now, so a random
+            // value here makes every shipping assertion in the suite flaky —
+            // it straddles the 1 kg boundary. Tests that care set it directly.
+            'weight_g' => 400,
             'length_mm' => 200,
             'width_mm' => 150,
             'height_mm' => 50,

@@ -34,8 +34,15 @@ class SettingController extends Controller
 
     public function update(SettingRequest $request): RedirectResponse
     {
-        $values = $request->safe()->except('flat_shipping_fee');
+        $values = $request->safe()->except(array_merge(
+            ['flat_shipping_fee'],
+            array_keys(SettingRequest::MONEY_FIELDS),
+        ));
+
+        // Every money field is converted to sen exactly once, here. A ringgit
+        // string must never reach the settings table.
         $values['flat_shipping_fee_minor'] = (string) $request->flatShippingFeeMinor();
+        $values = array_merge($values, $request->shippingRatesMinor());
 
         foreach ($values as $key => $value) {
             Setting::put($key, (string) $value);

@@ -40,9 +40,14 @@ class SecurityManipulationTest extends TestCase
     #[Test]
     public function a_hidden_price_field_cannot_change_what_is_charged(): void
     {
-        $variant = ProductVariant::factory()->create(['price_minor' => 5000, 'stock_qty' => 5]);
+        // 400 g rounds up to one chargeable kilo, so delivery is the
+        // first-kilo price and the arithmetic below is readable.
+        $variant = ProductVariant::factory()->create([
+            'price_minor' => 5000, 'stock_qty' => 5, 'weight_g' => 400,
+        ]);
         $this->post(route('cart.store'), ['variant_id' => $variant->id, 'qty' => 1]);
-        Setting::put('flat_shipping_fee_minor', '1000');
+        Setting::put('ship_west_first_minor', '1000');
+        Setting::put('ship_west_next_minor', '300');
 
         $this->post(route('checkout.store'), $this->details([
             'price_minor' => 1,

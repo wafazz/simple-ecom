@@ -11,7 +11,12 @@ final class ShippingQuote
         public readonly string $serviceName,
         public readonly int $priceMinor,
         public readonly ?string $deliveryDuration = null,
-        /** 'api' when EasyParcel quoted it, 'flat' when the fallback fired. */
+        /**
+         * Where the price came from:
+         *  'weight' — the store's own weight table (what customers are charged)
+         *  'api'    — an EasyParcel quotation (used for booking cost, not price)
+         *  'flat'   — the legacy single flat rate, kept for existing orders
+         */
         public readonly string $source = 'api',
     ) {}
 
@@ -29,6 +34,12 @@ final class ShippingQuote
     public function isFlat(): bool
     {
         return $this->source === 'flat';
+    }
+
+    /** Priced from the store's own weight table rather than a courier. */
+    public function isWeightBased(): bool
+    {
+        return $this->source === 'weight';
     }
 
     public function label(): string

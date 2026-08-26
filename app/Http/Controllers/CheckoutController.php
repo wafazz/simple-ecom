@@ -9,6 +9,7 @@ use App\Models\Order;
 use App\Services\CartService;
 use App\Services\EasyParcelService;
 use App\Support\ShippingQuote;
+use App\Support\ShippingRate;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
@@ -36,9 +37,12 @@ class CheckoutController extends Controller
         return view('storefront.checkout', [
             'lines' => $lines,
             'subtotalMinor' => $subtotal,
-            // Rates are fetched by AJAX once an address is entered; until then
-            // the flat rate is shown so a total is always visible.
-            'fallbackQuote' => $this->easyparcel->flatQuote(),
+            // Priced from the store's own weight table. The zone is not known
+            // until a state is chosen, so West is shown until then and the
+            // figure updates as soon as the customer picks one.
+            'weightG' => $this->cart->totalWeightG(),
+            'billableKilos' => ShippingRate::billableKilos($this->cart->totalWeightG()),
+            'fallbackQuote' => ShippingRate::quoteFor('MY-14', $this->cart->totalWeightG()),
         ]);
     }
 
@@ -124,36 +128,20 @@ class CheckoutController extends Controller
     }
 
     /**
-     * Re-quotes server-side and matches the customer's chosen service_id
-     * (Planning §11.B.4).
+     * The delivery charge, computed server-side from the store's weight table.
      *
-     * The browser posts an identifier, never a price. If that service is no
-     * longer offered — or the API is unreachable — the flat rate applies rather
-     * than whatever the browser claimed.
+     * Nothing the browser sent is used. Not a price, not a service id, not a
+     * weight — the state comes from the validated address and the weight is
+     * re-read from the cart, so what is charged cannot be influenced from
+     * outside (§17). This is why there is no longer anything to "match": the
+     * figure is derived, not chosen.
      */
     private function resolveShippingQuote(CheckoutRequest $request): ShippingQuote
     {
-        $chosen = $request->validated()['shipping_service_id'] ?? null;
-
-        if ($chosen === null || $chosen === 'flat') {
-            return $this->easyparcel->flatQuote();
-        }
-
-        $quotes = $this->easyparcel->quote(
-            $request->validated()['postcode'],
+        return ShippingRate::quoteFor(
             $request->validated()['state'],
             $this->cart->totalWeightG(),
         );
-
-        foreach ($quotes as $quote) {
-            if ($quote->serviceId === $chosen) {
-                return $quote;
-            }
-        }
-
-        Log::warning('Chosen courier is no longer quoted; using flat rate', ['service_id' => $chosen]);
-
-        return $this->easyparcel->flatQuote();
     }
 
     /**

@@ -34,14 +34,19 @@ class CheckoutTest extends TestCase
 
     private int $skuSeq = 0;
 
-    private function cartWith(int $priceMinor = 3000, int $qty = 2, int $stock = 10, string $sku = 'TS-M-BLA'): ProductVariant
+    /**
+     * @param  int  $weightG  pinned, not left to the factory's random value:
+     *                        delivery is priced by weight, so a random one
+     *                        would make every shipping assertion flaky.
+     */
+    private function cartWith(int $priceMinor = 3000, int $qty = 2, int $stock = 10, string $sku = 'TS-M-BLA', int $weightG = 400): ProductVariant
     {
         // SKU is globally unique, so repeated calls need distinct values.
         $sku = $this->skuSeq++ === 0 ? $sku : $sku.'-'.$this->skuSeq;
 
         $product = Product::factory()->create(['name' => 'T-Shirt']);
         $variant = ProductVariant::factory()->for($product)->options('M', 'Black')
-            ->create(['price_minor' => $priceMinor, 'stock_qty' => $stock, 'sku' => $sku]);
+            ->create(['price_minor' => $priceMinor, 'stock_qty' => $stock, 'sku' => $sku, 'weight_g' => $weightG]);
 
         $this->post(route('cart.store'), ['variant_id' => $variant->id, 'qty' => $qty]);
 
@@ -76,19 +81,26 @@ class CheckoutTest extends TestCase
     {
         // The core price-tampering control (spec §17).
         $this->cartWith(priceMinor: 3000, qty: 2);
-        Setting::put('flat_shipping_fee_minor', '1000');
+        Setting::put('ship_west_first_minor', '800');
+        Setting::put('ship_west_next_minor', '300');
 
         $this->post(route('checkout.store'), $this->details([
             'subtotal_minor' => 1,
             'shipping_fee_minor' => 0,
             'grand_total_minor' => 1,
+            // There is no longer a courier to choose, so this is not even a
+            // recognised field — posting one must change nothing.
+            'shipping_service_id' => 'SVC-FREE',
         ]));
 
         $order = Order::firstOrFail();
 
+        // 2 × 400 g = 800 g, which rounds up to one chargeable kilo, to a
+        // MY-14 (West Malaysia) address → the first-kilo price.
         $this->assertSame(6000, $order->subtotal_minor);
-        $this->assertSame(1000, $order->shipping_fee_minor);
-        $this->assertSame(7000, $order->grand_total_minor);
+        $this->assertSame(800, $order->shipping_fee_minor);
+        $this->assertSame(6800, $order->grand_total_minor);
+        $this->assertSame('weight', $order->shipping_rate_source);
     }
 
     #[Test]

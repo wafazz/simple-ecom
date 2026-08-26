@@ -3,19 +3,21 @@
 namespace App\Http\Controllers;
 
 use App\Services\CartService;
-use App\Services\EasyParcelService;
 use App\Support\Money;
+use App\Support\ShippingRate;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
-/** REQ-006 — AJAX rate lookup from the checkout page (Planning §11.B.4). */
+/**
+ * REQ-006 — the delivery charge for an address, as the customer types it.
+ *
+ * Priced from the store's own weight table, so this makes no outbound call and
+ * cannot be slowed down or broken by a courier API.
+ */
 class ShippingController extends Controller
 {
-    public function __construct(
-        private readonly EasyParcelService $easyparcel,
-        private readonly CartService $cart,
-    ) {}
+    public function __construct(private readonly CartService $cart) {}
 
     public function quote(Request $request): JsonResponse
     {
@@ -25,24 +27,20 @@ class ShippingController extends Controller
         ]);
 
         if ($this->cart->isEmpty()) {
-            return response()->json(['quotes' => [], 'message' => 'Your cart is empty.'], 422);
+            return response()->json(['message' => 'Your cart is empty.'], 422);
         }
 
-        $quotes = $this->easyparcel->quote(
-            $data['postcode'],
-            $data['state'],
-            $this->cart->totalWeightG(),
-        );
+        $weightG = $this->cart->totalWeightG();
+        $quote = ShippingRate::quoteFor($data['state'], $weightG);
 
+        // Advisory only. The same calculation runs again when the order is
+        // placed, from the address that was actually submitted — this response
+        // is what the page displays, never what the customer is charged.
         return response()->json([
-            'quotes' => array_map(fn ($q): array => [
-                'service_id' => $q->serviceId,
-                'label' => $q->label(),
-                'price_minor' => $q->priceMinor,
-                'price' => Money::display($q->priceMinor, config('shop.currency_symbol')),
-                'delivery_duration' => $q->deliveryDuration,
-                'is_flat' => $q->isFlat(),
-            ], $quotes),
+            'zone' => ShippingRate::zoneLabel(ShippingRate::zoneFor($data['state'])),
+            'kilos' => ShippingRate::billableKilos($weightG),
+            'price_minor' => $quote->priceMinor,
+            'price' => Money::display($quote->priceMinor, config('shop.currency_symbol')),
         ]);
     }
 }

@@ -116,7 +116,12 @@
                                 <td class="money" data-subtotal="{{ $subtotalMinor }}"><x-money :minor="$subtotalMinor" /></td>
                             </tr>
                             <tr>
-                                <th class="text-end">Shipping</th>
+                                <th class="text-end">
+                                    Delivery
+                                    <div class="text-muted small fw-normal" id="ship-basis">
+                                        {{ $billableKilos }} kg · choose a state
+                                    </div>
+                                </th>
                                 <td class="money" id="shipping-total"><x-money :minor="$fallbackQuote->priceMinor" /></td>
                             </tr>
                             <tr>
@@ -131,34 +136,23 @@
                         <hr>
 
                         <h3 class="h6">Delivery</h3>
-                        <button type="button" id="get-rates" class="btn btn-quiet btn-sm mb-2">
-                            Get courier rates
-                        </button>
-                        <p class="text-muted small" id="rates-hint">
-                            Enter your postcode and state, then check rates.
+                        <p class="text-muted small mb-3" id="ship-note">
+                            Charged by parcel weight. Pick your state above and the
+                            figure updates.
                         </p>
 
-                        <div id="rate-options">
-                            {{-- Always one selectable option so an order can be
-                                 placed even when the rate API is unreachable. --}}
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="shipping_service_id"
-                                       id="rate-flat" value="{{ $fallbackQuote->serviceId }}"
-                                       data-price="{{ $fallbackQuote->priceMinor }}" checked>
-                                <label class="form-check-label" for="rate-flat">
-                                    {{ $fallbackQuote->label() }} —
-                                    <x-money :minor="$fallbackQuote->priceMinor" />
-                                </label>
-                            </div>
-                        </div>
+                        {{-- No courier choice and no service id is posted. The
+                             charge is derived on the server from the submitted
+                             state and the cart's own weight, so there is nothing
+                             here for a customer to influence (§17). --}}
 
                         <button type="submit" class="btn btn-shop btn-lg w-100">Place order &amp; pay</button>
 
                         <p class="text-muted small mt-3 mb-0">
                             <i class="bi bi-shield-check me-1" aria-hidden="true"></i>
-                            You will be taken to ToyyibPay to complete payment. Every price
-                            and the courier rate are recalculated on the server when you
-                            place the order.
+                            You will be taken to ToyyibPay to complete payment. Every
+                            price, including delivery, is recalculated on the server when
+                            you place the order.
                         </p>
                     </div>
                 </div>
@@ -169,15 +163,19 @@
 
 @push('scripts')
 <script>
-// Fetches courier rates for the entered address. The chosen service_id is an
-// identifier only — the server re-quotes and prices it again on submit, so
-// nothing here can influence what is charged.
+/* Shows the delivery charge for the chosen state. The endpoint prices from the
+   store's weight table, so this is a display convenience only — the same
+   calculation runs again server-side from the address actually submitted, and
+   THAT is what the customer is charged. */
 (function () {
-    var btn = document.getElementById('get-rates');
-    if (!btn) return;
+    var state = document.getElementById('state');
+    var out = document.getElementById('shipping-total');
+    var basis = document.getElementById('ship-basis');
+    var note = document.getElementById('ship-note');
+    var grand = document.getElementById('grand-total');
+    var postcode = document.getElementById('postcode');
+    if (!state || !out || !grand) return;
 
-    var options = document.getElementById('rate-options');
-    var hint = document.getElementById('rates-hint');
     var subtotal = parseInt(document.querySelector('[data-subtotal]').dataset.subtotal, 10);
 
     function money(minor) {
@@ -187,26 +185,8 @@
             Math.floor(minor / 100) + '.' + String(minor % 100).padStart(2, '0');
     }
 
-    function recalc() {
-        var picked = options.querySelector('input[name="shipping_service_id"]:checked');
-        var ship = picked ? parseInt(picked.dataset.price, 10) : 0;
-        document.getElementById('shipping-total').textContent = money(ship);
-        document.getElementById('grand-total').textContent = money(subtotal + ship);
-    }
-
-    options.addEventListener('change', recalc);
-
-    btn.addEventListener('click', function () {
-        var postcode = document.getElementById('postcode').value;
-        var state = document.getElementById('state').value;
-
-        if (!postcode || !state) {
-            hint.textContent = 'Enter your postcode and state first.';
-            return;
-        }
-
-        btn.disabled = true;
-        hint.textContent = 'Checking rates…';
+    function refresh() {
+        if (!state.value) return;
 
         fetch('{{ route('shipping.quote') }}', {
             method: 'POST',
@@ -215,63 +195,24 @@
                 'Accept': 'application/json',
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
             },
-            body: JSON.stringify({ postcode: postcode, state: state })
+            // A postcode is required by the endpoint but does not change the
+            // price; only the state decides the zone.
+            body: JSON.stringify({ postcode: postcode.value || '00000', state: state.value })
         })
-        .then(function (r) { return r.json(); })
+        .then(function (r) { return r.ok ? r.json() : null; })
         .then(function (data) {
-            var quotes = data.quotes || [];
-            if (!quotes.length) { hint.textContent = 'No rates available; a flat rate applies.'; return; }
+            if (!data) return;
 
-            options.innerHTML = '';
-            quotes.forEach(function (q, i) {
-                var id = 'rate-' + i;
-                // Built as DOM nodes, not innerHTML: the courier name and
-                // duration come from EasyParcel, and §17 says third-party
-                // strings are never trusted — including as markup.
-                var div = document.createElement('div');
-                div.className = 'form-check';
-
-                var input = document.createElement('input');
-                input.className = 'form-check-input';
-                input.type = 'radio';
-                input.name = 'shipping_service_id';
-                input.id = id;
-                input.value = q.service_id;
-                input.dataset.price = q.price_minor;
-                input.checked = i === 0;
-
-                var label = document.createElement('label');
-                label.className = 'form-check-label';
-                label.htmlFor = id;
-                label.appendChild(document.createTextNode(q.label + ' — ' + q.price));
-
-                if (q.delivery_duration) {
-                    var dur = document.createElement('span');
-                    dur.className = 'text-muted small';
-                    dur.textContent = ' (' + q.delivery_duration + ')';
-                    label.appendChild(dur);
-                }
-
-                if (q.is_flat) {
-                    var flag = document.createElement('span');
-                    flag.className = 'badge text-bg-secondary ms-1';
-                    flag.textContent = 'flat rate';
-                    label.appendChild(flag);
-                }
-
-                div.appendChild(input);
-                div.appendChild(label);
-                options.appendChild(div);
-            });
-
-            hint.textContent = quotes[0].is_flat
-                ? 'Live rates unavailable — a flat rate applies.'
-                : 'Choose a delivery option.';
-            recalc();
+            out.textContent = money(data.price_minor);
+            grand.textContent = money(subtotal + data.price_minor);
+            if (basis) basis.textContent = data.kilos + ' kg · ' + data.zone;
+            if (note) note.textContent = 'Charged by parcel weight to ' + data.zone + '.';
         })
-        .catch(function () { hint.textContent = 'Could not fetch rates; a flat rate applies.'; })
-        .finally(function () { btn.disabled = false; });
-    });
+        .catch(function () { /* leave the figure as it stands */ });
+    }
+
+    state.addEventListener('change', refresh);
+    if (state.value) refresh();
 })();
 </script>
 @endpush

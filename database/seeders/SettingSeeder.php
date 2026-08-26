@@ -47,6 +47,13 @@ class SettingSeeder extends Seeder
             // never costs a sale (Planning §11.B.6, OQ-04).
             'flat_shipping_fee_minor' => '1000',
 
+            // Weight-based delivery (REQ-006). Placeholder figures — the store
+            // sets its real ones under Settings before going live.
+            'ship_west_first_minor' => '800',
+            'ship_west_next_minor' => '300',
+            'ship_east_first_minor' => '1500',
+            'ship_east_next_minor' => '1200',
+
             'low_stock_threshold' => '5',
         ];
 

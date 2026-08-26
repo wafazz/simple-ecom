@@ -185,7 +185,7 @@ class ShippingTest extends TestCase
     }
 
     #[Test]
-    public function the_quote_endpoint_returns_options_for_the_current_cart(): void
+    public function the_quote_endpoint_prices_the_current_cart_from_the_weight_table(): void
     {
         $this->connect();
         Http::fake(['*shipment/quotations' => Http::response($this->quotationBody(), 200)]);
@@ -193,8 +193,8 @@ class ShippingTest extends TestCase
 
         $this->postJson(route('shipping.quote'), ['postcode' => '11900', 'state' => 'MY-07'])
             ->assertOk()
-            ->assertJsonPath('quotes.0.service_id', 'SVC-A')
-            ->assertJsonPath('quotes.0.price', 'RM10.84');
+            ->assertJsonPath('zone', 'West Malaysia')
+            ->assertJsonStructure(['zone', 'kilos', 'price_minor', 'price']);
     }
 
     #[Test]
@@ -207,9 +207,11 @@ class ShippingTest extends TestCase
     }
 
     #[Test]
-    public function the_chosen_courier_is_re_priced_server_side_at_order_creation(): void
+    public function what_the_customer_pays_is_derived_not_chosen(): void
     {
-        // The browser posts an identifier, never a price.
+        // There is no courier to pick any more, so a posted service id is not
+        // a thing the server consults — it is simply ignored. This is a
+        // stronger guarantee than the old "re-quote and match" rule (§17).
         $this->connect();
         Http::fake(['*shipment/quotations' => Http::response($this->quotationBody(), 200)]);
         $this->cartWithOneItem();
@@ -224,29 +226,29 @@ class ShippingTest extends TestCase
 
         $order = Order::firstOrFail();
 
-        $this->assertSame(1420, $order->shipping_fee_minor);
-        $this->assertSame('SVC-B', $order->courier_service_id);
-        $this->assertSame('api', $order->shipping_rate_source);
-        $this->assertSame(3000 + 1420, $order->grand_total_minor);
+        // MY-07 is Penang — West. One 400 g item rounds to one kilo.
+        $this->assertSame(800, $order->shipping_fee_minor);
+        $this->assertSame('weight', $order->shipping_rate_source);
+        $this->assertSame('weight-west', $order->courier_service_id);
     }
 
     #[Test]
-    public function a_courier_that_is_no_longer_quoted_falls_back_to_the_flat_rate(): void
+    public function an_unreachable_courier_api_no_longer_affects_the_price(): void
     {
-        $this->connect();
-        Http::fake(['*shipment/quotations' => Http::response($this->quotationBody(), 200)]);
+        // The whole point of pricing from our own table: the checkout does not
+        // depend on a third party being up.
+        Http::fake(['*' => Http::response('', 500)]);
         $this->cartWithOneItem();
 
         $this->post(route('checkout.store'), [
             'customer_name' => 'Aisha', 'customer_email' => 'a@b.test', 'customer_phone' => '0123456789',
             'address_line' => '12 Jalan', 'city' => 'Georgetown', 'state' => 'MY-07',
             'postcode' => '11900', 'country' => 'MY',
-            'shipping_service_id' => 'SVC-GONE',
         ]);
 
         $order = Order::firstOrFail();
 
-        $this->assertSame(1000, $order->shipping_fee_minor);
-        $this->assertSame('flat', $order->shipping_rate_source);
+        $this->assertSame(800, $order->shipping_fee_minor);
+        $this->assertSame('weight', $order->shipping_rate_source);
     }
 }

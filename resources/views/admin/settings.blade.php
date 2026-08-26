@@ -87,13 +87,72 @@
                             @error('default_weight_g') <div class="invalid-feedback">{{ $message }}</div> @enderror
                         </div>
                         <div class="col-md-6">
-                            <label for="flat_shipping_fee" class="form-label">Flat shipping fee ({{ config('shop.currency_symbol') }})</label>
+                            <label for="flat_shipping_fee" class="form-label">Legacy flat fee ({{ config('shop.currency_symbol') }})</label>
                             <input type="text" inputmode="decimal" name="flat_shipping_fee" id="flat_shipping_fee" required
                                    value="{{ old('flat_shipping_fee', \App\Support\Money::format((int) ($settings['flat_shipping_fee_minor'] ?? 1000))) }}"
                                    class="form-control @error('flat_shipping_fee') is-invalid @enderror">
-                            <div class="form-text">Charged when live courier rates are unavailable.</div>
+                            <div class="form-text">
+                                Not charged any more — delivery is priced from the weight table below.
+                                Kept only so older orders still read correctly.
+                            </div>
                             @error('flat_shipping_fee') <div class="invalid-feedback">{{ $message }}</div> @enderror
                         </div>
+                    </div>
+                </div>
+
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h2 class="card-title h6 mb-0">Delivery charges by weight</h2>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted small">
+                            What the <strong>customer</strong> pays. Part kilos round up, the way a
+                            courier bills — a 1.2&nbsp;kg parcel is charged as 2&nbsp;kg. This is
+                            separate from what EasyParcel charges you when the shipment is booked;
+                            the difference shows on each order.
+                        </p>
+
+                        <div class="table-responsive">
+                            <table class="table align-middle mb-0">
+                                <thead>
+                                <tr>
+                                    <th>Zone</th>
+                                    <th style="width: 12rem">1st kilo ({{ config('shop.currency_symbol') }})</th>
+                                    <th style="width: 12rem">Each next kilo ({{ config('shop.currency_symbol') }})</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                @foreach ([
+                                    ['west', 'West Malaysia', 'Peninsular — every state except the three below.'],
+                                    ['east', 'East Malaysia', 'Sabah, Sarawak and W.P. Labuan.'],
+                                ] as [$zone, $label, $note])
+                                    <tr>
+                                        <td>
+                                            <strong>{{ $label }}</strong>
+                                            <div class="text-muted small">{{ $note }}</div>
+                                        </td>
+                                        @foreach (['first', 'next'] as $part)
+                                            @php $field = 'ship_'.$zone.'_'.$part; @endphp
+                                            <td>
+                                                <input type="text" inputmode="decimal" required
+                                                       name="{{ $field }}" id="{{ $field }}"
+                                                       aria-label="{{ $label }} {{ $part === 'first' ? 'first kilo' : 'each next kilo' }}"
+                                                       value="{{ old($field, \App\Support\Money::format((int) ($settings[$field.'_minor'] ?? \App\Support\ShippingRate::{$part === 'first' ? 'firstKiloMinor' : 'nextKiloMinor'}($zone)))) }}"
+                                                       class="form-control @error($field) is-invalid @enderror">
+                                                @error($field) <div class="invalid-feedback">{{ $message }}</div> @enderror
+                                            </td>
+                                        @endforeach
+                                    </tr>
+                                @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <p class="text-muted small mb-0 mt-3">
+                            Example at the West figures above: 0.4&nbsp;kg and 1.0&nbsp;kg both pay the
+                            first-kilo price; 1.1&nbsp;kg pays first&nbsp;+&nbsp;one add-on; 2.3&nbsp;kg pays
+                            first&nbsp;+&nbsp;two.
+                        </p>
                     </div>
                 </div>
 
