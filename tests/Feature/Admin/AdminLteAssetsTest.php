@@ -130,6 +130,25 @@ class AdminLteAssetsTest extends TestCase
     }
 
     #[Test]
+    public function submenu_items_are_indented_beneath_their_parent(): void
+    {
+        // app.css must load AFTER adminlte.min.css or the indent loses to
+        // AdminLTE's `.sidebar-menu .nav-treeview { padding: 0 }`.
+        $html = $this->actingAs(User::factory()->create())
+            ->get(route('admin.dashboard'))->assertOk()->getContent();
+
+        $adminlte = strpos($html, 'vendor/adminlte/adminlte.min.css');
+        $app = strpos($html, 'css/app.css');
+
+        $this->assertNotFalse($adminlte);
+        $this->assertNotFalse($app);
+        $this->assertGreaterThan($adminlte, $app, 'app.css must be loaded after adminlte.min.css.');
+
+        $css = file_get_contents(base_path('public/css/app.css'));
+        $this->assertStringContainsString('.app-sidebar .nav-treeview > .nav-item > .nav-link', $css);
+    }
+
+    #[Test]
     public function the_orders_parent_toggles_the_submenu_instead_of_navigating(): void
     {
         $html = $this->actingAs(User::factory()->create())

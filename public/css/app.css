@@ -179,3 +179,25 @@ footer.shop-footer {
 .delta--down { background: #dc3545; color: #fff; }
 .delta--up   { background: #17804d; color: #fff; }
 .delta--flat { background: transparent; color: var(--bs-secondary-color, #6c757d); }
+
+/* ---------------------------------------------------------------------------
+   Sidebar submenu indent.
+
+   AdminLTE sets .sidebar-menu .nav-treeview { padding: 0 }, so child items sit
+   flush with their parent and the nesting is not readable. The parent's icon is
+   1.5rem wide and its label adds .5rem, so indenting the children by 1.5rem
+   lands their bullets under the start of the parent's label — a deliberate
+   alignment rather than an arbitrary nudge.
+
+   Loaded after adminlte.min.css, so this wins without !important.
+   --------------------------------------------------------------------------- */
+
+.app-sidebar .nav-treeview > .nav-item > .nav-link {
+    padding-left: 1.5rem;
+}
+
+/* When the sidebar is collapsed to icons the submenu is revealed on hover in a
+   narrow flyout, where that indent would only eat horizontal space. */
+.sidebar-collapse .app-sidebar:hover .nav-treeview > .nav-item > .nav-link {
+    padding-left: .5rem;
+}
