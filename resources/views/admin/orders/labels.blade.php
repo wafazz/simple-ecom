@@ -10,11 +10,25 @@
     </p>
 
     <div class="mb-3 d-print-none">
-        <button type="button" class="btn btn-shop" data-open-all>
+        <button type="button" class="btn btn-shop" data-open-all
+                data-count="{{ $orders->count() }}">
             <i class="bi bi-box-arrow-up-right me-1"></i>Open all {{ $orders->count() }} label(s)
+        </button>
+        <button type="button" class="btn btn-quiet" data-copy-all>
+            <i class="bi bi-clipboard me-1"></i>Copy all links
         </button>
         <a href="{{ route('admin.orders.index', ['order_status' => 'processing']) }}"
            class="btn btn-secondary">Back to orders</a>
+
+        {{-- A browser opens the FIRST window.open() of a gesture and blocks the
+             rest. Silently opening one label out of ten is the worst possible
+             outcome, so the count is checked and said out loud. --}}
+        <div class="alert alert-warning mt-3 d-none" data-blocked-notice>
+            <strong>Your browser blocked <span data-blocked-count></span> of the labels.</strong>
+            Allow pop-ups for this site and press the button again, or open them
+            one at a time from the list below — a link you click yourself is never
+            blocked. Labels you have already opened are ticked.
+        </div>
     </div>
 
     <div class="card">
@@ -50,6 +64,8 @@
                                    data-label-url>
                                     <i class="bi bi-printer me-1"></i>Label
                                 </a>
+                                <span class="text-success d-none" data-opened-tick
+                                      title="Opened">&check;</span>
                             @else
                                 {{-- Documented behaviour: awb_url is null in
                                      EasyParcel's own success example. The label
@@ -71,13 +87,70 @@
 
 @push('scripts')
 <script>
-/* Opens each label in its own tab. Browsers block a burst of popups unless the
-   click is what triggered them, so they are opened synchronously from the
-   handler rather than on a timer. */
-document.querySelector('[data-open-all]')?.addEventListener('click', function () {
-    document.querySelectorAll('[data-label-url]').forEach(function (a) {
-        window.open(a.href, '_blank', 'noopener');
+(function () {
+    var button = document.querySelector('[data-open-all]');
+    if (!button) return;
+
+    var notice = document.querySelector('[data-blocked-notice]');
+    var blockedOut = document.querySelector('[data-blocked-count]');
+
+    function links() { return Array.prototype.slice.call(document.querySelectorAll('[data-label-url]')); }
+
+    button.addEventListener('click', function () {
+        var blocked = 0;
+
+        links().forEach(function (a) {
+            /* No features string. Passing one — even just 'noopener' — asks for
+               a popup WINDOW rather than a tab, and popups are blocked far more
+               aggressively than tabs. It also makes window.open() return null by
+               spec, which would make every open look blocked. */
+            var win = window.open(a.href, '_blank');
+
+            if (win) {
+                // Same protection the rel="noopener" on the link gives.
+                win.opener = null;
+
+                var tick = a.parentElement.querySelector('[data-opened-tick]');
+                if (tick) tick.classList.remove('d-none');
+            } else {
+                blocked++;
+            }
+        });
+
+        if (blocked > 0) {
+            if (blockedOut) blockedOut.textContent = blocked;
+            if (notice) notice.classList.remove('d-none');
+        } else if (notice) {
+            notice.classList.add('d-none');
+        }
     });
-});
+
+    // Clicking a single label yourself is never blocked; tick it too so a
+    // part-finished batch is easy to pick back up.
+    links().forEach(function (a) {
+        a.addEventListener('click', function () {
+            var tick = a.parentElement.querySelector('[data-opened-tick]');
+            if (tick) tick.classList.remove('d-none');
+        });
+    });
+
+    // The fallback that always works, even with pop-ups fully disabled.
+    var copy = document.querySelector('[data-copy-all]');
+    if (copy) {
+        copy.addEventListener('click', function () {
+            var urls = links().map(function (a) { return a.href; }).join('\n');
+            var original = copy.innerHTML;
+
+            navigator.clipboard.writeText(urls).then(function () {
+                copy.innerHTML = '<i class="bi bi-check2 me-1"></i>Copied ' + links().length + ' link(s)';
+                window.setTimeout(function () { copy.innerHTML = original; }, 2200);
+            }).catch(function () {
+                // No clipboard permission (or an insecure origin): show them
+                // instead of failing quietly.
+                window.prompt('Copy these label links:', urls);
+            });
+        });
+    }
+})();
 </script>
 @endpush

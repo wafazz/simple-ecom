@@ -338,6 +338,75 @@ class BulkShipmentTest extends TestCase
     }
 
     #[Test]
+    public function every_selected_label_reaches_the_print_sheet(): void
+    {
+        // The bug this guards: "bulk print AWB only shows one". The server
+        // side was never the problem, but it is the half that can be tested,
+        // so it is pinned.
+        $orders = collect(range(1, 5))->map(function (int $i): Order {
+            $order = $this->order();
+            Shipment::factory()->for($order)->booked()->create([
+                'awb_no' => 'AWB-'.$i,
+                'label_url' => 'https://app.easyparcel.com/label/'.$i,
+            ]);
+
+            return $order;
+        });
+
+        $html = $this->actingAs($this->admin)
+            ->get(route('admin.orders.awb', ['order_ids' => $orders->pluck('id')->all()]))
+            ->assertOk()
+            ->getContent();
+
+        foreach (range(1, 5) as $i) {
+            $this->assertStringContainsString('AWB-'.$i, $html);
+            $this->assertStringContainsString('label/'.$i, $html);
+        }
+
+        // 'data-label-url>' matches only the anchors; the bare attribute name
+        // also appears inside the script's own selector.
+        $this->assertSame(5, substr_count($html, 'data-label-url>'));
+    }
+
+    #[Test]
+    public function the_print_sheet_survives_a_popup_blocker(): void
+    {
+        // A browser opens the first window.open() of a gesture and blocks the
+        // rest, so "Open all" cannot be the only route to the labels. Two
+        // fallbacks that a blocker cannot touch: the per-row links, and
+        // copying every URL at once.
+        $order = $this->order();
+        Shipment::factory()->for($order)->booked()->create([
+            'awb_no' => 'AWB-1', 'label_url' => 'https://app.easyparcel.com/label/1',
+        ]);
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.orders.awb', ['order_ids' => [$order->id]]))
+            ->assertOk()
+            ->assertSee('data-copy-all', false)
+            ->assertSee('data-blocked-notice', false)
+            // Opened as a tab, never a popup window: passing any features
+            // string asks for a popup, which is blocked far more readily.
+            ->assertSee("window.open(a.href, '_blank')", false)
+            ->assertDontSee("'_blank', 'noopener'", false);
+    }
+
+    #[Test]
+    public function a_booked_order_with_no_label_yet_says_so_on_the_print_sheet(): void
+    {
+        $order = $this->order();
+        Shipment::factory()->for($order)->booked()->create([
+            'awb_no' => 'AWB-1', 'label_url' => null,
+        ]);
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.orders.awb', ['order_ids' => [$order->id]]))
+            ->assertOk()
+            ->assertSee('AWB-1')
+            ->assertSee('Label not issued yet');
+    }
+
+    #[Test]
     public function the_courier_and_awb_show_on_every_fulfilment_status(): void
     {
         foreach ([
