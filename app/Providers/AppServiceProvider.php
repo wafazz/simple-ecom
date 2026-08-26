@@ -58,9 +58,19 @@ class AppServiceProvider extends ServiceProvider
         // view that renders the variable in its own section receives nothing
         // from a layout-only composer. (Repeat of a Phase 4 defect.)
         View::composer(['layouts.admin', 'admin.*'], function ($view): void {
-            $view->with('needsReviewCount', Order::query()
-                ->where('order_status', OrderStatus::NeedsReview->value)
-                ->count());
+            // ONE grouped query for every sidebar badge, rather than a count
+            // per status. Missing keys mean zero.
+            $counts = Order::query()
+                ->selectRaw('order_status, count(*) as total')
+                ->groupBy('order_status')
+                ->pluck('total', 'order_status')
+                ->all();
+
+            $view->with([
+                'orderStatusCounts' => $counts,
+                'orderTotalCount' => array_sum($counts),
+                'needsReviewCount' => $counts[OrderStatus::NeedsReview->value] ?? 0,
+            ]);
         });
 
         View::composer(['layouts.*', 'storefront.*', 'admin.*'], function ($view): void {

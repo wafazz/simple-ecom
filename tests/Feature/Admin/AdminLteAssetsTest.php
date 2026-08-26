@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\Admin;
 
+use App\Enums\OrderStatus;
+use App\Models\Order;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
@@ -78,6 +80,64 @@ class AdminLteAssetsTest extends TestCase
         foreach ($woff2 as $relative) {
             $this->assertFileExists($dir.'/'.$relative);
         }
+    }
+
+    #[Test]
+    public function the_sidebar_lists_every_order_status_as_a_filter(): void
+    {
+        $html = $this->actingAs(User::factory()->create())
+            ->get(route('admin.dashboard'))->assertOk()->getContent();
+
+        foreach (OrderStatus::selectable() as $case) {
+            $this->assertStringContainsString(
+                route('admin.orders.index', ['order_status' => $case->value]),
+                $html,
+                "Sidebar is missing a filter link for {$case->label()}."
+            );
+            $this->assertStringContainsString($case->label(), $html);
+        }
+    }
+
+    #[Test]
+    public function the_sidebar_shows_a_count_beside_each_status(): void
+    {
+        Order::factory()->count(3)->create();                 // pending
+        Order::factory()->paid()->count(2)->create();          // new_order
+
+        $html = $this->actingAs(User::factory()->create())
+            ->get(route('admin.dashboard'))->assertOk()->getContent();
+
+        // One grouped query drives every badge; totals must add up.
+        $this->assertStringContainsString('nav-badge', $html);
+        $this->assertMatchesRegularExpression('/All Orders\s*<span class="nav-badge[^"]*">5</s', $html);
+    }
+
+    #[Test]
+    public function needs_review_appears_in_the_sidebar_only_when_there_is_something_to_review(): void
+    {
+        // It is system-set and cannot be chosen, so a permanent empty entry
+        // would be noise. It earns its place only when it has contents.
+        $html = $this->actingAs(User::factory()->create())
+            ->get(route('admin.dashboard'))->assertOk()->getContent();
+        $this->assertStringNotContainsString('order_status=needs_review', $html);
+
+        $order = Order::factory()->paid()->create();
+        $order->forceFill(['order_status' => OrderStatus::NeedsReview])->save();
+
+        $html = $this->actingAs(User::factory()->create())
+            ->get(route('admin.dashboard'))->assertOk()->getContent();
+        $this->assertStringContainsString('order_status=needs_review', $html);
+    }
+
+    #[Test]
+    public function the_orders_treeview_is_open_on_an_order_screen(): void
+    {
+        // A collapsed parent would hide which filter is currently applied.
+        $html = $this->actingAs(User::factory()->create())
+            ->get(route('admin.orders.index'))->assertOk()->getContent();
+
+        $this->assertStringContainsString('menu-open', $html);
+        $this->assertStringContainsString('nav-treeview', $html);
     }
 
     #[Test]

@@ -80,18 +80,84 @@
         <div class="sidebar-wrapper">
             <nav class="mt-2">
                 <ul class="nav sidebar-menu flex-column" data-lte-toggle="treeview" role="navigation">
+                    <li class="nav-item">
+                        <a href="{{ route('admin.dashboard') }}"
+                           class="nav-link {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">
+                            <i class="nav-icon bi bi-speedometer2"></i>
+                            <p>Dashboard</p>
+                        </a>
+                    </li>
+
                     @php
-                        $nav = [
-                            ['admin.dashboard',        'admin.dashboard',    'bi-speedometer2', 'Dashboard'],
-                            ['admin.orders.index',     'admin.orders.*',     'bi-receipt',      'Orders'],
-                            ['admin.products.index',   'admin.products.*',   'bi-box-seam',     'Products'],
-                            ['admin.categories.index', 'admin.categories.*', 'bi-tags',         'Categories'],
-                            ['admin.integrations.index','admin.integrations.*','bi-plug',       'Integrations'],
-                            ['admin.settings.edit',    'admin.settings.*',   'bi-gear',         'Settings'],
+                        $onOrders = request()->routeIs('admin.orders.*');
+                        $activeStatus = request()->query('order_status');
+                    @endphp
+
+                    {{-- Treeview. Opens whenever an order screen is showing, so the
+                         current filter is never hidden behind a collapsed parent. --}}
+                    <li class="nav-item {{ $onOrders ? 'menu-open' : '' }}">
+                        <a href="{{ route('admin.orders.index') }}" class="nav-link {{ $onOrders ? 'active' : '' }}">
+                            <i class="nav-icon bi bi-receipt"></i>
+                            <p>
+                                Orders
+                                <i class="nav-arrow bi bi-chevron-right"></i>
+                            </p>
+                        </a>
+                        <ul class="nav nav-treeview">
+                            <li class="nav-item">
+                                <a href="{{ route('admin.orders.index') }}"
+                                   class="nav-link {{ $onOrders && ! $activeStatus ? 'active' : '' }}">
+                                    <i class="nav-icon bi bi-circle"></i>
+                                    <p>
+                                        All Orders
+                                        <span class="nav-badge badge text-bg-secondary">{{ number_format($orderTotalCount) }}</span>
+                                    </p>
+                                </a>
+                            </li>
+
+                            @foreach (\App\Enums\OrderStatus::selectable() as $case)
+                                @php $count = $orderStatusCounts[$case->value] ?? 0; @endphp
+                                <li class="nav-item">
+                                    <a href="{{ route('admin.orders.index', ['order_status' => $case->value]) }}"
+                                       class="nav-link {{ $activeStatus === $case->value ? 'active' : '' }}">
+                                        <i class="nav-icon bi bi-circle"></i>
+                                        <p>
+                                            {{ $case->label() }}
+                                            @if ($count > 0)
+                                                <span class="nav-badge badge text-bg-secondary">{{ number_format($count) }}</span>
+                                            @endif
+                                        </p>
+                                    </a>
+                                </li>
+                            @endforeach
+
+                            {{-- System-set, so it is not in selectable() — but it must be
+                                 reachable, and it is the one an owner needs to see. --}}
+                            @if ($needsReviewCount > 0)
+                                <li class="nav-item">
+                                    <a href="{{ route('admin.orders.index', ['order_status' => 'needs_review']) }}"
+                                       class="nav-link {{ $activeStatus === 'needs_review' ? 'active' : '' }}">
+                                        <i class="nav-icon bi bi-exclamation-triangle text-warning"></i>
+                                        <p>
+                                            Needs Review
+                                            <span class="nav-badge badge text-bg-warning">{{ number_format($needsReviewCount) }}</span>
+                                        </p>
+                                    </a>
+                                </li>
+                            @endif
+                        </ul>
+                    </li>
+
+                    @php
+                        $rest = [
+                            ['admin.products.index',    'admin.products.*',     'bi-box-seam', 'Products'],
+                            ['admin.categories.index',  'admin.categories.*',   'bi-tags',     'Categories'],
+                            ['admin.integrations.index','admin.integrations.*', 'bi-plug',     'Integrations'],
+                            ['admin.settings.edit',     'admin.settings.*',     'bi-gear',     'Settings'],
                         ];
                     @endphp
 
-                    @foreach ($nav as [$route, $pattern, $icon, $label])
+                    @foreach ($rest as [$route, $pattern, $icon, $label])
                         <li class="nav-item">
                             <a href="{{ route($route) }}"
                                class="nav-link {{ request()->routeIs($pattern) ? 'active' : '' }}">
