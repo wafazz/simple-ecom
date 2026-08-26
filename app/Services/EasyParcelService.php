@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\IntegrationToken;
 use App\Models\Setting;
+use App\Support\IntegrationConfig;
 use App\Support\Money;
 use App\Support\ShippingQuote;
 use Illuminate\Http\Client\PendingRequest;
@@ -40,8 +41,8 @@ class EasyParcelService
         return new self(
             (string) config('services.easyparcel.base_url'),
             (string) config('services.easyparcel.oauth_url'),
-            config('services.easyparcel.client_id'),
-            config('services.easyparcel.client_secret'),
+            IntegrationConfig::get('easyparcel.client_id'),
+            IntegrationConfig::get('easyparcel.client_secret'),
             (string) config('services.easyparcel.weight_unit', 'kg'),
         );
     }

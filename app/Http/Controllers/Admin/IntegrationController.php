@@ -3,7 +3,10 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\IntegrationCredentialRequest;
 use App\Services\EasyParcelService;
+use App\Services\ToyyibPayService;
+use App\Support\IntegrationConfig;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -15,7 +18,10 @@ class IntegrationController extends Controller
 {
     private const STATE_KEY = 'easyparcel_oauth_state';
 
-    public function __construct(private readonly EasyParcelService $easyparcel) {}
+    public function __construct(
+        private readonly EasyParcelService $easyparcel,
+        private readonly ToyyibPayService $toyyibpay,
+    ) {}
 
     public function index(): View
     {
@@ -27,7 +33,65 @@ class IntegrationController extends Controller
             // Expiry dates and connection state only — never token material.
             'expiresAt' => $token?->expires_at,
             'connectedAt' => $token?->connected_at,
+            'toyyibpayConfigured' => $this->toyyibpay->isConfigured(),
+            'sandbox' => [
+                'toyyibpay' => (bool) config('services.toyyibpay.sandbox'),
+                'easyparcel' => (bool) config('services.easyparcel.sandbox'),
+            ],
+            // Presence, source and a masked hint — never the value itself.
+            'credentials' => collect(IntegrationConfig::EDITABLE)
+                ->mapWithKeys(fn (string $key): array => [$key => [
+                    'source' => IntegrationConfig::source($key),
+                    'hint' => IntegrationConfig::hint($key),
+                    'write_only' => in_array($key, IntegrationConfig::WRITE_ONLY, true),
+                ]])
+                ->all(),
         ]);
+    }
+
+    /** REQ-011 — save admin-entered credentials, encrypted at rest. */
+    public function storeCredentials(IntegrationCredentialRequest $request): RedirectResponse
+    {
+        $submitted = $request->credentials();
+
+        if ($submitted === []) {
+            return back()->with('status', 'Nothing to save — all fields were blank.');
+        }
+
+        foreach ($submitted as $key => $value) {
+            IntegrationConfig::put($key, $value);
+        }
+
+        // Keys only. A credential must never reach a log line (spec §24).
+        Log::info('Integration credentials updated', [
+            'keys' => array_keys($submitted),
+            'user_id' => $request->user()?->id,
+        ]);
+
+        return redirect()
+            ->route('admin.integrations.index')
+            ->with('status', count($submitted).' credential(s) saved.');
+    }
+
+    /**
+     * Removes the stored value so the `.env` setting takes over again. A blank
+     * field on save cannot mean this — the form never shows the current value,
+     * so "blank" has to mean "leave it alone".
+     */
+    public function clearCredential(Request $request, string $key): RedirectResponse
+    {
+        if (! in_array($key, IntegrationConfig::EDITABLE, true)) {
+            abort(404);
+        }
+
+        IntegrationConfig::forget($key);
+
+        Log::warning('Integration credential cleared', [
+            'key' => $key,
+            'user_id' => $request->user()?->id,
+        ]);
+
+        return back()->with('status', 'Cleared. The value from .env applies again, if one is set.');
     }
 
     public function connect(Request $request): RedirectResponse

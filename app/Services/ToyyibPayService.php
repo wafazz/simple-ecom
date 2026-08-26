@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Order;
+use App\Support\IntegrationConfig;
 use App\Support\Money;
 use App\Support\PaymentVerification;
 use Illuminate\Http\Client\PendingRequest;
@@ -45,8 +46,9 @@ class ToyyibPayService
     {
         return new self(
             (string) config('services.toyyibpay.base_url'),
-            config('services.toyyibpay.secret_key'),
-            config('services.toyyibpay.category_code'),
+            // Admin-set value wins over .env (Planning §5.4).
+            IntegrationConfig::get('toyyibpay.secret_key'),
+            IntegrationConfig::get('toyyibpay.category_code'),
             (string) config('services.toyyibpay.amount_format', 'decimal'),
         );
     }

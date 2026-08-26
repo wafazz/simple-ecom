@@ -107,6 +107,9 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
 
         // EasyParcel connection (REQ-006)
         Route::get('/integrations', [IntegrationController::class, 'index'])->name('integrations.index');
+        Route::put('/integrations/credentials', [IntegrationController::class, 'storeCredentials'])->name('integrations.credentials');
+        Route::delete('/integrations/credentials/{key}', [IntegrationController::class, 'clearCredential'])
+            ->where('key', '[a-z_.]+')->name('integrations.credentials.clear');
         Route::post('/integrations/easyparcel/connect', [IntegrationController::class, 'connect'])->name('integrations.connect');
         Route::get('/integrations/easyparcel/callback', [IntegrationController::class, 'callback'])->name('integrations.callback');
         Route::delete('/integrations/easyparcel', [IntegrationController::class, 'disconnect'])->name('integrations.disconnect');

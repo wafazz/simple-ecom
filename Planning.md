@@ -215,6 +215,41 @@ Before any Composer package: (1) does Laravel 12 already provide it? (2) is it g
 
 ---
 
+### 5.4 Integration credentials — admin-editable (added 2026-08-27, client request)
+
+Spec §12 lists "ToyyibPay credentials/configuration" and "EasyParcel
+credentials/configuration" under Settings. Planning §3.3 originally read that
+conservatively — status badge only, values in `.env` — to keep a credential-leak
+path out of the admin UI. The client has asked for the actual form, so it is
+built, with the §16 rule intact: **"never expose API secrets to Blade templates
+or client-side JavaScript."**
+
+How both hold at once:
+
+- Values live in a **`secure_settings`** table, `encrypted` cast, AES-256-GCM.
+  Separate from `settings`, which is documented non-secret and is cached.
+- **Never cached.** Caching a decrypted secret writes plaintext into
+  `storage/framework/cache` and defeats the encrypted column entirely. One
+  indexed lookup per service construction is the price.
+- **Write-only fields.** The form never renders a stored secret — only a masked
+  hint (`••••••••1234`) that identifies it. Secrets use `type="password"` and
+  `autocomplete="new-password"`.
+- **Blank means "leave it alone", never "clear it"** — the form cannot show the
+  current value, so blank cannot safely mean deletion. Clearing is a separate
+  explicit action per credential.
+- **Precedence**: an admin-set value overrides `.env`; clearing falls back to
+  `.env`. The screen states which source is in effect for each credential.
+- **Allow-list**: only the four keys in `IntegrationConfig::EDITABLE` can be
+  written or cleared; anything else is a 404 / `InvalidArgumentException`.
+- **Logs record keys only**, never values (spec §24), and the model marks
+  `value` as `$hidden` so a stray `toArray()`/`toJson()` cannot leak it.
+
+Residual risk, stated plainly: credentials are now reachable by anyone with
+admin access, where before they required server access. That is a real widening
+of the blast radius and it is the client's decision. The compensating controls
+are the forced first-login password change (§17.4), login throttling, the
+admin-group middleware, and encryption at rest.
+
 ### 5.3 Admin template — AdminLTE 4 (added 2026-08-27, client request)
 
 The admin panel is built on **AdminLTE 4.9.1**, at the client's request. It is a
