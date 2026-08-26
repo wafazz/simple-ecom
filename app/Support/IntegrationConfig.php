@@ -30,7 +30,23 @@ final class IntegrationConfig
         'easyparcel.client_secret',
     ];
 
+    /** Providers that have their own credential form. */
+    public const PROVIDERS = ['toyyibpay', 'easyparcel'];
+
     private function __construct() {}
+
+    /**
+     * The editable keys belonging to one provider.
+     *
+     * @return array<int, string>
+     */
+    public static function editableFor(string $provider): array
+    {
+        return array_values(array_filter(
+            self::EDITABLE,
+            fn (string $key): bool => str_starts_with($key, $provider.'.')
+        ));
+    }
 
     public static function get(string $key): ?string
     {

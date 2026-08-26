@@ -29,7 +29,7 @@ class IntegrationCredentialTest extends TestCase
     public function a_guest_cannot_read_or_write_credentials(): void
     {
         $this->get(route('admin.integrations.index'))->assertRedirect(route('admin.login'));
-        $this->put(route('admin.integrations.credentials'), ['toyyibpay_secret_key' => 'x'])
+        $this->put(route('admin.integrations.credentials', 'toyyibpay'), ['toyyibpay_secret_key' => 'x'])
             ->assertRedirect(route('admin.login'));
 
         $this->assertSame(0, SecureSetting::count());
@@ -38,7 +38,7 @@ class IntegrationCredentialTest extends TestCase
     #[Test]
     public function a_saved_credential_is_encrypted_at_rest(): void
     {
-        $this->actingAs($this->admin)->put(route('admin.integrations.credentials'), [
+        $this->actingAs($this->admin)->put(route('admin.integrations.credentials', 'toyyibpay'), [
             'toyyibpay_secret_key' => 'tp-live-SUPERSECRET',
         ])->assertRedirect();
 
@@ -73,7 +73,7 @@ class IntegrationCredentialTest extends TestCase
         // alone" — never "clear it".
         IntegrationConfig::put('toyyibpay.secret_key', 'keep-me');
 
-        $this->actingAs($this->admin)->put(route('admin.integrations.credentials'), [
+        $this->actingAs($this->admin)->put(route('admin.integrations.credentials', 'toyyibpay'), [
             'toyyibpay_secret_key' => '',
             'toyyibpay_category_code' => 'cat-123',
         ])->assertRedirect();
@@ -118,6 +118,48 @@ class IntegrationCredentialTest extends TestCase
     }
 
     #[Test]
+    public function each_provider_form_can_only_write_its_own_credentials(): void
+    {
+        // The forms are separate, and so is what each submission may touch:
+        // posting EasyParcel fields to the ToyyibPay form changes nothing.
+        $this->actingAs($this->admin)->put(route('admin.integrations.credentials', 'toyyibpay'), [
+            'toyyibpay_secret_key' => 'tp-value',
+            'easyparcel_client_secret' => 'should-be-ignored',
+        ])->assertRedirect();
+
+        $this->assertSame('tp-value', IntegrationConfig::get('toyyibpay.secret_key'));
+        $this->assertFalse(IntegrationConfig::isSetByAdmin('easyparcel.client_secret'));
+    }
+
+    #[Test]
+    public function an_unknown_provider_is_refused(): void
+    {
+        $this->actingAs($this->admin)
+            ->put(route('admin.integrations.credentials', 'toyyibpay'), [])
+            ->assertRedirect();
+
+        $this->actingAs($this->admin)
+            ->put('/admin/integrations/stripe/credentials', ['x' => 'y'])
+            ->assertNotFound();
+    }
+
+    #[Test]
+    public function each_provider_has_its_own_form_on_the_page(): void
+    {
+        $html = $this->actingAs($this->admin)
+            ->get(route('admin.integrations.index'))->assertOk()->getContent();
+
+        $this->assertStringContainsString(
+            'action="'.route('admin.integrations.credentials', 'toyyibpay').'"', $html
+        );
+        $this->assertStringContainsString(
+            'action="'.route('admin.integrations.credentials', 'easyparcel').'"', $html
+        );
+        $this->assertStringContainsString('Save ToyyibPay credentials', $html);
+        $this->assertStringContainsString('Save EasyParcel credentials', $html);
+    }
+
+    #[Test]
     public function only_known_credentials_can_be_written_or_cleared(): void
     {
         $this->expectException(\InvalidArgumentException::class);
@@ -138,7 +180,7 @@ class IntegrationCredentialTest extends TestCase
         $logFile = storage_path('logs/laravel-'.now()->format('Y-m-d').'.log');
         $before = file_exists($logFile) ? filesize($logFile) : 0;
 
-        $this->actingAs($this->admin)->put(route('admin.integrations.credentials'), [
+        $this->actingAs($this->admin)->put(route('admin.integrations.credentials', 'toyyibpay'), [
             'toyyibpay_secret_key' => 'tp-NEVERLOGGED',
         ])->assertRedirect();
 

@@ -49,8 +49,8 @@ class IntegrationController extends Controller
         ]);
     }
 
-    /** REQ-011 — save admin-entered credentials, encrypted at rest. */
-    public function storeCredentials(IntegrationCredentialRequest $request): RedirectResponse
+    /** REQ-011 — save one provider's credentials, encrypted at rest. */
+    public function storeCredentials(IntegrationCredentialRequest $request, string $provider): RedirectResponse
     {
         $submitted = $request->credentials();
 
@@ -64,13 +64,14 @@ class IntegrationController extends Controller
 
         // Keys only. A credential must never reach a log line (spec §24).
         Log::info('Integration credentials updated', [
+            'provider' => $provider,
             'keys' => array_keys($submitted),
             'user_id' => $request->user()?->id,
         ]);
 
         return redirect()
             ->route('admin.integrations.index')
-            ->with('status', count($submitted).' credential(s) saved.');
+            ->with('status', ucfirst($provider).': '.count($submitted).' credential(s) saved.');
     }
 
     /**

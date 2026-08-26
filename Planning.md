@@ -239,6 +239,10 @@ How both hold at once:
   explicit action per credential.
 - **Precedence**: an admin-set value overrides `.env`; clearing falls back to
   `.env`. The screen states which source is in effect for each credential.
+- **One form per provider.** ToyyibPay and EasyParcel each have their own card,
+  form and save button, posting to `/admin/integrations/{provider}/credentials`.
+  A submission can only write that provider's keys — posting EasyParcel fields to
+  the ToyyibPay form changes nothing. An unknown provider is a 404.
 - **Allow-list**: only the four keys in `IntegrationConfig::EDITABLE` can be
   written or cleared; anything else is a 404 / `InvalidArgumentException`.
 - **Logs record keys only**, never values (spec §24), and the model marks

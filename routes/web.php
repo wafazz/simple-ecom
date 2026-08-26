@@ -16,6 +16,7 @@ use App\Http\Controllers\OrderStatusController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ShippingController;
+use App\Support\IntegrationConfig;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -107,7 +108,11 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
 
         // EasyParcel connection (REQ-006)
         Route::get('/integrations', [IntegrationController::class, 'index'])->name('integrations.index');
-        Route::put('/integrations/credentials', [IntegrationController::class, 'storeCredentials'])->name('integrations.credentials');
+        // One form per provider, so a submission can only ever write that
+        // provider's keys.
+        Route::put('/integrations/{provider}/credentials', [IntegrationController::class, 'storeCredentials'])
+            ->whereIn('provider', IntegrationConfig::PROVIDERS)
+            ->name('integrations.credentials');
         Route::delete('/integrations/credentials/{key}', [IntegrationController::class, 'clearCredential'])
             ->where('key', '[a-z_.]+')->name('integrations.credentials.clear');
         Route::post('/integrations/easyparcel/connect', [IntegrationController::class, 'connect'])->name('integrations.connect');
