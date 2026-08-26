@@ -1,12 +1,12 @@
 # Session Memory - Basic Custom E-Commerce
-> Last updated: 2026-08-27 04:30
+> Last updated: 2026-08-27 05:15
 
 ## Session Context
 - **Project**: Basic Custom E-Commerce
 - **Profile**: `~/Desktop/CS/Projects/06-basic-ecom.md`
-- **Branch**: master — Ph2 `43035bf`, Ph3 `23bb05a`, Ph4 `448979a`, Ph5 `4c31125`, Ph6 `735219d`, Ph7 `5c42880`, Ph8a `14e57a1`, Ph9 `8979096`
+- **Branch**: master — Ph2…Ph9 as before, Ph10 `96940dd`
 - **Status**: active — Planning.md APPROVED 2026-08-26. Phase 2 complete, Phase 3 next.
-- **Focus**: Phase 10 — Security & Testing (full purchase flow). **8b still blocked on OQ-13.**
+- **Focus**: Phase 11 — Deployment instructions + client handoff. **8b still blocked on OQ-13.**
 
 ## Current Tasks
 - [x] Phase 0 Intake — name, work mode, deploy target, database
@@ -22,7 +22,7 @@
 - [x] **Phase 7 — Payment**: ToyyibPayService (fail-closed), PaymentController, settlement transaction. **Built; cannot settle live until OQ-11**
 - [x] **Phase 8a — Shipping rates**: EasyParcelService (OAuth + rotation mutex), quotations, flat-rate fallback, checkout rate picker, admin Integrations screen
 - [x] **Phase 9 — Admin**: order list/detail/status/refund, settings, integrations screen
-- [ ] **Phase 10 — Security & Testing**: full purchase-flow coverage, security sweep
+- [x] **Phase 10 — Security & Testing**: E2E purchase flow + both-APIs-down flow, §17 manipulation sweep, grep audit
 - [ ] **Phase 11 — Deployment**: production instructions + client handoff
 - [ ] **Phase 8b — Booking/AWB/tracking** (REQ-013). **BLOCKED on OQ-13**
 - [ ] **OQ-13 blocks Phase 8b** — read `shipment/submit` + `shipment/pay` payloads from `github.com/easyparcel/OpenAPI` and record them. Booking code cannot be written first (§3)
@@ -99,6 +99,10 @@
 - Scout verified: **Laravel 12 left bug-fix support 2026-08-13**; Laravel 13 is current; local PHP is 8.4.10 so `config.platform.php = "8.3"` is load-bearing; Composer 2.8.10 present; Bootstrap 5.3.8 current.
 - Applied 5 patterns from `11-pattern-library.md`: atomic race-free guard, integer minor units, variants-without-EAV, soft-deletes/unique-index, encrypted secrets at rest.
 
+### Phase 10 notes
+- **`/security-review` could not run** — it diffs against `origin/HEAD` and this repo has no remote. Checks walked by hand: grep audit (no `DB::raw` with input, no `{!! !!}`, no `$guarded = []`, no `env()` outside `config/`, no hardcoded secrets, no debug helpers), plus 11 manipulation tests.
+- **`Http::fake()` MERGES, it does not override.** Re-faking the same URL pattern leaves the first stub winning — this silently broke the E2E amount check. Fake once; use a closure if the response depends on state created later.
+
 ### Phase 8a corrections
 - `shipping_service_id` is validated input but **not** an `Order` attribute — mass assignment threw until it was excluded explicitly. The guard working as designed.
 - `$quote` was used inside the order-creation closure without being captured in `use (...)`.
@@ -145,7 +149,10 @@
 - **179 tests / 469 assertions green on SQLite AND MariaDB 10.4.28.**
 - **Key admin constraint, tested**: the admin **cannot mark an order paid** — payment status is gateway-driven only. The single permitted payment-status change is recording a refund, allowed only from `paid`, moving no money.
 - Live: all six admin screens 200 after login; order detail renders the snapshot, resolves `MY-07` → Pulau Pinang, shows the flat-rate badge, hides "Mark as refunded" on an unpaid order.
-- Next: **Phase 10 — Security & Testing.** Full purchase-flow coverage per spec §32, security sweep per §17. Then **Phase 11 deployment + client handoff** (`52-handoff-protocol.md`). **8b booking stays blocked on OQ-13.**
+- **192 tests / 538 assertions green on SQLite AND MariaDB 10.4.28.** All 21 suites listed under spec §32's areas.
+- **E2E proven**: browse → two distinct variations → live quote → checkout → gateway → callback → settled (stock decremented once) → customer tracks → admin sees. And the same flow with **both APIs down**: order completes at the flat rate, nothing marked paid, no stock moved.
+- Production config verified: `APP_DEBUG=false`, AES-256-GCM, encrypted lax http-only sessions. `composer audit` clean. `.env` untracked.
+- Next: **Phase 11 — Deployment.** Rewrite `DEPLOYMENT.md` for the VPS sequence (Planning §17), then client handoff per `52-handoff-protocol.md`. **8b booking stays blocked on OQ-13; REQ-005 cannot settle live until OQ-11.**
 
 ### Key Context for Next Session
 - **The payment path fails closed on purpose.** If payments don't settle in testing, check `Planning.md` §11.A.6 before assuming a bug.

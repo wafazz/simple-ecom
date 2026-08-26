@@ -1,6 +1,6 @@
 # Planning.md — Basic Custom E-Commerce (Laravel 12 / PHP 8.3)
 
-> **Status**: **APPROVED 2026-08-26.** Phases 2–9 complete (8a only; **8b blocked on OQ-13**). Phase 10 (Security & Testing) next.
+> **Status**: **APPROVED 2026-08-26.** Phases 2–10 complete (8a only; **8b blocked on OQ-13**). Phase 11 (Deployment) next.
 > **Last Updated**: 2026-08-26
 > **Spec source**: `Prompt.txt` — *CoreSentinel Development Instruction — Laravel 12 Basic Custom E-Commerce* (36 sections)
 > **Agent**: Iris / CoreSentinel · Init Protocol `05-init-protocol.md`
@@ -50,9 +50,9 @@ Status vocabulary: `Planned` | `In-Progress` | `Verified` | `Done`.
 | `REQ-007` | Order Management | `app/Http/Controllers/Admin/OrderController.php`<br>`app/Http/Controllers/OrderStatusController.php`<br>`app/Enums/OrderStatus.php` | admin group, `/order-status` | `tests/Feature/OrderTest.php` | `docs/documentation.md#orders` | `Verified` — Phase 9 |
 | `REQ-008` | Inventory / Stock | `app/Models/ProductVariant.php` (guarded decrement)<br>`app/Http/Controllers/Admin/VariationController.php` | admin group | `tests/Feature/InventoryTest.php` | `docs/documentation.md#inventory` | `Verified` — Phase 5 |
 | `REQ-009` | Admin Panel & Auth | `app/Http/Controllers/Admin/{Auth,Dashboard}Controller.php`<br>`app/Models/User.php`<br>`app/Http/Middleware/EnsureAdminIsActive.php` | `/admin/*` | `tests/Feature/Admin/AuthTest.php` | `docs/documentation.md#admin` | `Verified` — Phase 4/9 |
-| `REQ-010` | Security Controls | `bootstrap/app.php`<br>`app/Http/Requests/*`<br>route middleware groups | all | `tests/Feature/SecurityTest.php` | `docs/documentation.md#security` | `Planned` |
+| `REQ-010` | Security Controls | `bootstrap/app.php`<br>`app/Http/Requests/*`<br>route middleware groups | all | `tests/Feature/SecurityTest.php` | `docs/documentation.md#security` | `Verified` — Phase 10 |
 | `REQ-011` | Store Settings | `app/Http/Controllers/Admin/SettingController.php`<br>`app/Models/Setting.php` | admin group | `tests/Feature/SettingTest.php` | `docs/documentation.md#settings` | `Verified` — Phase 9 |
-| `REQ-012` | Error Handling & Logging | `bootstrap/app.php` (`withExceptions`)<br>`config/logging.php`<br>`app/Http/Middleware/AssignRequestId.php` | all | `tests/Feature/ErrorHandlingTest.php` | `docs/documentation.md#logging` | `Planned` |
+| `REQ-012` | Error Handling & Logging | `bootstrap/app.php` (`withExceptions`)<br>`config/logging.php`<br>`app/Http/Middleware/AssignRequestId.php` | all | `tests/Feature/ErrorHandlingTest.php` | `docs/documentation.md#logging` | `Verified` — Phase 10 |
 | `REQ-013` | **Shipment Booking, AWB & Tracking** | `app/Http/Controllers/Admin/ShipmentController.php`<br>`app/Services/EasyParcelService.php` (booking methods)<br>`app/Models/Shipment.php`<br>`app/Enums/ShipmentStatus.php` | admin group, `/order-status` | `tests/Feature/ShipmentBookingTest.php` | `docs/documentation.md#booking` | `In-Progress` — model + migration + tests |
 
 Every commit message references its `REQ-0NN`. No orphan code.
@@ -979,7 +979,7 @@ The client confirmed **MySQL 8.0**, so `DB_CONNECTION=mysql` is correct. Recorde
 | 8a | **Shipping — rates** — verified EasyParcel quotations (REQ-006) | ✅ **Built** — commit `14e57a1`. OAuth + rotation mutex, quotations, flat-rate fallback, checkout rate picker. 159 tests green. Needs a sandbox round trip (OQ-03) |
 | 8b | **Shipping — booking, AWB & tracking** (REQ-013) — `shipments` table, admin booking action, reconciliation screen, tracking | `Planned` — **blocked until the payloads in §11.B.5.1 are read and recorded**. Sandbox-only until then |
 | 9 | **Admin** — dashboard, catalogue, orders, settings (REQ-007/009/011) | ✅ **Done** — commit `8979096`. Orders list/detail/status/refund, settings, integrations. 179 tests green |
-| 10 | **Security & Testing** — full purchase flow tested (REQ-010/012) | `Planned` |
+| 10 | **Security & Testing** — full purchase flow tested (REQ-010/012) | ✅ **Done** — commit `96940dd`. E2E flow + outage flow; §17 manipulation sweep. 192 tests / 538 assertions green on SQLite + MariaDB |
 | 11 | **Deployment** — production instructions + client handoff | `Planned` |
 
 ---
