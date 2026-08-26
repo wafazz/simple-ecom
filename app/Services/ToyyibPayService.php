@@ -137,13 +137,38 @@ class ToyyibPayService
         $body = $response->body();
 
         if (! $response->successful()) {
-            return ['ok' => false, 'summary' => "Gateway replied HTTP {$response->status()}."];
+            return [
+                'ok' => false,
+                'summary' => "Gateway replied HTTP {$response->status()}.",
+                'endpoint' => $this->endpoint('getBillTransactions'),
+                'raw' => $this->redact(trim($response->body())),
+            ];
         }
 
         if (! json_validate($body)) {
+            // Report what actually arrived. A short body is usually a sentinel
+            // the gateway uses for "no such bill" or "key rejected"; a long one
+            // is an error page. Guessing between them helps nobody.
+            $excerpt = $this->redact(trim($body));
+
+            // Branch on what the body WAS, not on how long it reads after tags
+            // are stripped: "<h1>502 Bad Gateway</h1>" collapses to 15
+            // characters and would otherwise be mistaken for a short sentinel.
+            $looksLikeMarkup = (bool) preg_match('/<\s*[a-z!\/]/i', $body);
+
             return [
                 'ok' => false,
-                'summary' => 'Gateway replied, but the body was not JSON — usually an error page.',
+                'summary' => $excerpt === ''
+                    ? "Gateway replied HTTP {$response->status()} with an empty body."
+                    : "Gateway replied HTTP {$response->status()}, but the body was not JSON.",
+                'endpoint' => $this->endpoint('getBillTransactions'),
+                'raw' => $excerpt,
+                'note' => $looksLikeMarkup
+                    ? 'That is an HTML error or login page, which points at the endpoint or the '
+                        .'account rather than the bill code.'
+                    : 'A short non-JSON reply usually means the bill code was not found or the '
+                        .'secret key was rejected. Try again with a genuine bill code — a bogus '
+                        .'one cannot tell those two apart.',
             ];
         }
 
@@ -198,7 +223,11 @@ class ToyyibPayService
         try {
             $body = $this->decode($response->body());
         } catch (RuntimeException $e) {
-            return PaymentVerification::unverified($e->getMessage());
+            // Still unverified — but name what arrived, so a log reader can
+            // tell "bill not found" from "the endpoint served an error page".
+            return PaymentVerification::unverified(
+                $e->getMessage().' Body: '.$this->redact(trim($response->body()))
+            );
         }
 
         $row = $body[0] ?? $body;
@@ -306,6 +335,23 @@ class ToyyibPayService
         $decoded = json_decode($body, true);
 
         return is_array($decoded) ? $decoded : [];
+    }
+
+    /**
+     * A short, safe excerpt of a response body for the diagnostics panel.
+     *
+     * Strips tags so an HTML error page collapses to its text, truncates, and
+     * removes the secret key on the vanishing chance the gateway echoes it.
+     */
+    private function redact(string $body): string
+    {
+        $text = trim(preg_replace('/\s+/', ' ', strip_tags($body)) ?? '');
+
+        if (filled($this->secretKey)) {
+            $text = str_replace($this->secretKey, '[secret-key]', $text);
+        }
+
+        return mb_strlen($text) > 200 ? mb_substr($text, 0, 200).'…' : $text;
     }
 
     private function firstString(array $row, array $keys): ?string

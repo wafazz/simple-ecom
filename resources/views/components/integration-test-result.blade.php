@@ -11,6 +11,15 @@
             <div class="mt-1"><code>{{ $result['endpoint'] }}</code></div>
         @endif
 
+        @if (! empty($result['raw']))
+            {{-- What the gateway actually sent, stripped of markup and
+                 truncated. Without this the failure is unactionable. --}}
+            <div class="mt-2">
+                Gateway replied:
+                <code class="d-block mt-1 p-2 bg-body-secondary text-body">{{ $result['raw'] }}</code>
+            </div>
+        @endif
+
         @if (! empty($result['detail']))
             <div class="mt-1">{{ $result['detail'] }}</div>
         @endif

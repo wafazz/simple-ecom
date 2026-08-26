@@ -287,17 +287,75 @@ class IntegrationCredentialTest extends TestCase
     }
 
     #[Test]
-    public function a_failing_test_says_what_went_wrong(): void
+    public function a_failing_test_shows_what_the_gateway_actually_replied(): void
     {
+        // "Not JSON — usually an error page" is a guess. Showing the body is
+        // the difference between an actionable failure and a dead end.
         IntegrationConfig::put('toyyibpay.secret_key', 'k');
         IntegrationConfig::put('toyyibpay.category_code', 'c');
 
-        Http::fake(['*getBillTransactions' => Http::response('<html>502</html>', 200)]);
+        Http::fake(['*getBillTransactions' => Http::response('[FALSE]', 200)]);
 
         $this->actingAs($this->admin)
             ->post(route('admin.integrations.test', 'toyyibpay'))
             ->assertSessionHas('test_result', fn (array $r): bool => $r['ok'] === false
-                && str_contains($r['summary'], 'not JSON'));
+                && $r['raw'] === '[FALSE]'
+                && str_contains($r['note'], 'genuine bill code'));
+    }
+
+    #[Test]
+    public function an_html_error_page_is_reduced_to_readable_text(): void
+    {
+        IntegrationConfig::put('toyyibpay.secret_key', 'k');
+        IntegrationConfig::put('toyyibpay.category_code', 'c');
+
+        Http::fake(['*getBillTransactions' => Http::response(
+            "<html><body><h1>502 Bad Gateway</h1>\n<p>nginx</p></body></html>", 200
+        )]);
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.integrations.test', 'toyyibpay'))
+            ->assertSessionHas('test_result', fn (array $r): bool => $r['ok'] === false
+                && str_contains($r['raw'], '502 Bad Gateway')
+                && ! str_contains($r['raw'], '<h1>')
+                && str_contains($r['note'], 'HTML error'));
+    }
+
+    #[Test]
+    public function the_secret_key_is_never_echoed_back_in_a_diagnostic(): void
+    {
+        // Vanishingly unlikely, but the excerpt is displayed on screen — so it
+        // is scrubbed regardless.
+        IntegrationConfig::put('toyyibpay.secret_key', 'tp-SECRET-KEY-9');
+        IntegrationConfig::put('toyyibpay.category_code', 'c');
+
+        Http::fake(['*getBillTransactions' => Http::response('error for key tp-SECRET-KEY-9', 200)]);
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.integrations.test', 'toyyibpay'));
+
+        $raw = session('test_result')['raw'];
+
+        $this->assertStringNotContainsString('tp-SECRET-KEY-9', $raw);
+        $this->assertStringContainsString('[secret-key]', $raw);
+    }
+
+    #[Test]
+    public function an_unreadable_verification_response_names_what_arrived(): void
+    {
+        // Same information reaches the log during a real payment, so "payments
+        // are not settling" can be diagnosed without guesswork.
+        config([
+            'services.toyyibpay.secret_key' => 'k',
+            'services.toyyibpay.category_code' => 'c',
+        ]);
+
+        Http::fake(['*getBillTransactions' => Http::response('[FALSE]', 200)]);
+
+        $result = app(ToyyibPayService::class)->verifyPayment('BILL1');
+
+        $this->assertTrue($result->isUnverified());
+        $this->assertStringContainsString('[FALSE]', $result->reason);
     }
 
     #[Test]
