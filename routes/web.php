@@ -9,6 +9,7 @@ use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\OrderStatusController;
+use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProductController;
 use Illuminate\Support\Facades\Route;
 
@@ -34,6 +35,12 @@ Route::delete('/cart/{variant}', [CartController::class, 'destroy'])->name('cart
 Route::get('/checkout', [CheckoutController::class, 'create'])->name('checkout.create');
 Route::post('/checkout', [CheckoutController::class, 'store'])->name('checkout.store');
 Route::get('/checkout/confirmation/{orderNo}', [CheckoutController::class, 'confirmation'])->name('checkout.confirmation');
+
+// Payment (REQ-005). The return and callback URLs are UNTRUSTED — both take
+// only the bill code and re-query the gateway server-side (Planning §11.A.5).
+Route::get('/payment/toyyibpay/return', [PaymentController::class, 'handleReturn'])->name('payment.return');
+Route::post('/payment/toyyibpay/callback', [PaymentController::class, 'handleCallback'])->name('payment.callback');
+Route::get('/payment/{orderNo}', [PaymentController::class, 'pay'])->name('payment.pay');
 
 Route::get('/order-status', [OrderStatusController::class, 'show'])->name('order-status.show');
 Route::post('/order-status', [OrderStatusController::class, 'lookup'])->name('order-status.lookup');

@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Models\Setting;
 use App\Services\CartService;
+use App\Services\ToyyibPayService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\View;
@@ -20,6 +21,10 @@ class AppServiceProvider extends ServiceProvider
             CartService::class,
             fn ($app) => new CartService($app['session.store'])
         );
+
+        // Bound explicitly: the constructor takes plain strings from config,
+        // which the container cannot autowire.
+        $this->app->bind(ToyyibPayService::class, fn () => ToyyibPayService::fromConfig());
     }
 
     /**

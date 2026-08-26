@@ -46,6 +46,12 @@ return [
             : 'https://toyyibpay.com',
         'connect_timeout' => 5,
         'timeout' => 10,
+
+        // OQ-11: the unit of getBillTransactions' amount field is unconfirmed.
+        // 'decimal' ("10.00" = RM10) is the documented reading. A wrong value
+        // causes an amount MISMATCH, which refuses to settle — it never
+        // silently accepts the wrong figure.
+        'amount_format' => env('TOYYIBPAY_AMOUNT_FORMAT', 'decimal'),
     ],
 
     // REQ-006 / REQ-013 — EasyParcel Open API 2026-06. Planning §11.B.

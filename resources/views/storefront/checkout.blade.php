@@ -120,11 +120,11 @@
                             </tfoot>
                         </table>
 
-                        <button type="submit" class="btn btn-shop w-100">Place order</button>
+                        <button type="submit" class="btn btn-shop w-100">Place order &amp; pay</button>
 
                         <p class="text-muted small mt-3 mb-0">
+                            You will be taken to ToyyibPay to complete payment.
                             Courier rates are quoted at this step from Phase 8; a flat rate applies for now.
-                            Payment is added in Phase 7.
                         </p>
                     </div>
                 </div>

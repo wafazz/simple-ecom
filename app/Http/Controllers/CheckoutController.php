@@ -103,10 +103,7 @@ class CheckoutController extends Controller
             'items' => $lines->count(),
         ]);
 
-        // Phase 7 redirects to ToyyibPay from here.
-        return redirect()
-            ->route('checkout.confirmation', $order->order_no)
-            ->with('status', 'Order created.');
+        return redirect()->route('payment.pay', $order->order_no);
     }
 
     public function confirmation(string $orderNo): View

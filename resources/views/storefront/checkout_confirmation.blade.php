@@ -40,6 +40,9 @@
 
     <p class="text-muted small mt-3">
         Payment status: <x-status-badge :status="$order->payment_status" />
-        — online payment is wired up in Phase 7.
     </p>
+
+    @if ($order->payment_status === \App\Enums\PaymentStatus::Pending)
+        <a href="{{ route('payment.pay', $order->order_no) }}" class="btn btn-shop">Pay now</a>
+    @endif
 @endsection
