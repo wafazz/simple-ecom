@@ -1,6 +1,6 @@
 # Planning.md — Basic Custom E-Commerce (Laravel 12 / PHP 8.3)
 
-> **Status**: Phase 1 — Planning. **Awaiting approval (§18).**
+> **Status**: **APPROVED 2026-08-26.** Phase 2 complete; Phase 3 (Database) in progress.
 > **Last Updated**: 2026-08-26
 > **Spec source**: `Prompt.txt` — *CoreSentinel Development Instruction — Laravel 12 Basic Custom E-Commerce* (36 sections)
 > **Agent**: Iris / CoreSentinel · Init Protocol `05-init-protocol.md`
@@ -969,9 +969,9 @@ The client confirmed **MySQL 8.0**, so `DB_CONNECTION=mysql` is correct. Recorde
 
 | Phase | Content | Status |
 |---|---|---|
-| **1** | **Planning.md** — this document. No application code. | 🔄 **Awaiting approval** |
-| 2 | **Laravel Foundation** — install Laravel 12 (no starter kit), configure environment, database connection, base application structure | `Planned` |
-| 3 | **Database** — migrations, Eloquent models, relationships, seeders | `Planned` |
+| **1** | **Planning.md** — this document. No application code. | ✅ **Approved 2026-08-26** |
+| 2 | **Laravel Foundation** — install Laravel 12 (no starter kit), configure environment, database connection, base application structure | ✅ **Done** — Laravel 12.68.0, commit `43035bf`. Vite removed, cipher AES-256-GCM, file/file/sync drivers, boots clean |
+| 3 | **Database** — migrations, Eloquent models, relationships, seeders | 🔄 **In progress** |
 | 4 | **Core Laravel MVC** — routes, controllers, Blade layouts/views, validation, middleware | `Planned` |
 | 5 | **Product** — categories, products, variations, stock (REQ-001/002/008) | `Planned` |
 | 6 | **Cart & Checkout** — session cart, product + variation selection, customer details, shipping address, order creation (REQ-003/004) | `Planned` |

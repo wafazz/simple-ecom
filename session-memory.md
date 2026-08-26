@@ -1,25 +1,33 @@
 # Session Memory - Basic Custom E-Commerce
-> Last updated: 2026-08-26 23:05
+> Last updated: 2026-08-26 23:30
 
 ## Session Context
 - **Project**: Basic Custom E-Commerce
 - **Profile**: `~/Desktop/CS/Projects/06-basic-ecom.md`
-- **Branch**: (not a git repo yet — `git init` before Phase 2)
-- **Status**: blocked — awaiting approval of `Planning.md` §21
-- **Focus**: Init Protocol complete. `Prompt.txt` §35 halts all implementation until the plan is approved.
+- **Branch**: master (git initialised; Phase 2 committed as `43035bf`)
+- **Status**: active — Planning.md APPROVED 2026-08-26. Phase 2 complete, Phase 3 next.
+- **Focus**: Phase 3 — migrations, models, relationships, seeders (spec §27).
 
 ## Current Tasks
 - [x] Phase 0 Intake — name, work mode, deploy target, database
 - [x] Phase 1 Research (Scout) — version baseline + pattern library sweep
 - [x] Init 3a–3f — profile, identity entry, stats label, session memory, Planning.md, docs/
 - [x] Rewrite `Planning.md` against the client's 36-section spec (11 phases, Cart/Checkout Design sections)
-- [ ] **BLOCKED**: client approval of `Planning.md` §21
+- [x] **Planning.md APPROVED** by client 2026-08-26
+- [x] **Phase 2 — Laravel 12 foundation** (installed, configured, verified, committed)
+- [ ] **Phase 3 — Database**: migrations, models, relationships, seeders
 - [ ] **OQ-13 blocks Phase 8b** — read `shipment/submit` + `shipment/pay` payloads from `github.com/easyparcel/OpenAPI` and record them. Booking code cannot be written first (§3)
 - [ ] **OQ-03 first** — is EasyParcel on the Open API (OAuth) or legacy Connect (flat key)? Changes Phase 8 design + table count
 - [ ] Verify ToyyibPay `getBillTransactions` field names against the official reference (human, browser)
-- [ ] Phase 2 — Laravel 12 foundation
+
 
 ## Working Memory
+
+### Active Context — ENVIRONMENT FINDINGS (2026-08-26, Phase 2)
+- ⚠ **Local DB is MariaDB 10.4.28 (XAMPP) on PORT 3307**, not MySQL 8.0 and not 3306. Local `.env` uses `DB_CONNECTION=mariadb` + `DB_PORT=3307`. `.env.example` keeps `mysql`/3306 for the VPS target. **Dev/prod engine divergence is an OPEN DECISION — see OQ-17.**
+- ⚠ **No PHP 8.3 on this machine.** Herd provides 8.2 and 8.4 only; local runtime is 8.4.10. `config.platform.php = "8.3"` in composer.json is what keeps Composer resolving for the 8.3 target. **OQ-18.**
+- Something else answers on port 3306 (returns "access denied") — not investigated, not ours.
+- Installed: Laravel **12.68.0**, PHPUnit **11.5.56**, 38 vendor packages. `composer audit` clean.
 
 ### Active Context
 - **`Prompt.txt` is the client's own document** (36 sections, replaced mine at 22:31). It is authoritative — do not edit it.
@@ -58,6 +66,8 @@
 - **OQ-13** booking payloads unverified — **blocks Phase 8b entirely**.
 - **OQ-14** booking trigger: admin action (planned) vs automatic on payment.
 - **OQ-15** label PDF: store URL (planned) vs re-host. **OQ-16** pickup date/address fields.
+- **OQ-17** **dev/prod DB engine divergence** — local MariaDB 10.4.28 vs VPS MySQL 8.0. Match them, or accept and test on both?
+- **OQ-18** PHP 8.3 absent locally (8.4.10 in use). Install 8.3, or develop on 8.4 with the platform pin holding the line?
 
 ## Recent Changes
 | File | Change | Status |
@@ -81,8 +91,9 @@
 - Applied 5 patterns from `11-pattern-library.md`: atomic race-free guard, integer minor units, variants-without-EAV, soft-deletes/unique-index, encrypted secrets at rest.
 
 ### Where We Left Off
-- Everything planned and documented. **Nothing scaffolded** — no Laravel install, deliberately, per §35.
-- Next on approval: Phase 2 (Laravel foundation) → Phase 3 (migrations/models/seeders).
+- **Phase 2 done and committed** (`43035bf`). App boots, `/` and `/up` return 200, 2/2 tests pass, pint clean, audit clean.
+- Verified working: AES-256-GCM encrypt/decrypt **and tamper rejection**; DB connection to `basic_ecom`.
+- Next: **Phase 3 — Database.** Trim skeleton migrations (delete cache + jobs; strip `password_reset_tokens` and `sessions` from the users migration), then write the 10 application tables, models, relationships and seeders.
 
 ### Key Context for Next Session
 - **The payment path fails closed on purpose.** If payments don't settle in testing, check `Planning.md` §11.A.6 before assuming a bug.
