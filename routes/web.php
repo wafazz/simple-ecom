@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\IntegrationController;
 use App\Http\Controllers\Admin\OrderController;
+use App\Http\Controllers\Admin\PasswordController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\VariationController;
@@ -66,8 +67,13 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
             ->name('login.attempt');
     });
 
-    Route::middleware(['auth', 'admin.active'])->group(function (): void {
+    Route::middleware(['auth', 'admin.active', 'admin.password'])->group(function (): void {
         Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+
+        // A seeded or handed-over credential must not survive first use
+        // (Planning §17.4).
+        Route::get('/password', [PasswordController::class, 'edit'])->name('password.edit');
+        Route::put('/password', [PasswordController::class, 'update'])->name('password.update');
         Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 
         // Categories (REQ-001)

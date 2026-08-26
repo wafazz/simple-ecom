@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\AssignRequestId;
 use App\Http\Middleware\EnsureAdminIsActive;
+use App\Http\Middleware\RequirePasswordChange;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -19,6 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'admin.active' => EnsureAdminIsActive::class,
+            'admin.password' => RequirePasswordChange::class,
         ]);
 
         // Planning §11.A.4 — ToyyibPay carries no CSRF token. This exclusion is
