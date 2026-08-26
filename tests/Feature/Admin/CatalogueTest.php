@@ -11,6 +11,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use League\Flysystem\UnableToCreateDirectory;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
@@ -160,6 +161,59 @@ class CatalogueTest extends TestCase
         $this->assertStringNotContainsString('evil', $path);
         $this->assertStringNotContainsString('..', $path);
         Storage::disk('uploads')->assertExists($path);
+    }
+
+    #[Test]
+    public function an_unwritable_uploads_folder_is_reported_not_crashed(): void
+    {
+        // Reproduces a live VPS failure. The `uploads` disk is configured
+        // 'throw' => false, but Laravel catches only UnableToWriteFile —
+        // Flysystem creates products/ on the first upload, and a failed mkdir
+        // throws UnableToCreateDirectory, which escaped and produced a bare
+        // 500 page with nothing an admin could act on.
+        Storage::shouldReceive('disk')->with('uploads')->andThrow(
+            UnableToCreateDirectory::atLocation('/var/www/public/uploads/products', 'Permission denied')
+        );
+
+        $category = Category::factory()->create();
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.products.store'), $this->productPayload([
+                'category_id' => $category->id,
+                'name' => 'Cap',
+                'image' => UploadedFile::fake()->image('cap.jpg'),
+            ], ['sku' => 'CAP-STD']))
+            ->assertSessionHasErrors('image');
+
+        // The message must not leak the server path it was told about.
+        $this->assertStringNotContainsString(
+            '/var/www',
+            (string) session('errors')->first('image')
+        );
+
+        // Nothing half-saved: no product without its picture.
+        $this->assertDatabaseMissing('products', ['slug' => 'cap']);
+    }
+
+    #[Test]
+    public function a_silently_failed_write_never_saves_a_product_with_no_image(): void
+    {
+        // The other half of 'throw' => false: when the failure IS swallowed,
+        // putFile() returns false, which would land in image_path as an empty
+        // value — a product that looks saved and has no picture.
+        Storage::shouldReceive('disk->putFile')->andReturn(false);
+
+        $category = Category::factory()->create();
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.products.store'), $this->productPayload([
+                'category_id' => $category->id,
+                'name' => 'Cap',
+                'image' => UploadedFile::fake()->image('cap.jpg'),
+            ], ['sku' => 'CAP-STD']))
+            ->assertSessionHasErrors('image');
+
+        $this->assertDatabaseMissing('products', ['slug' => 'cap']);
     }
 
     #[Test]

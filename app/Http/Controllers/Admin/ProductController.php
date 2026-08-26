@@ -12,7 +12,9 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use League\Flysystem\FilesystemException;
 
 /** REQ-001 / REQ-002 — product and its variations are defined in one form. */
 class ProductController extends Controller
@@ -222,14 +224,62 @@ class ProductController extends Controller
         ];
     }
 
-    /** Stored under a framework-generated name — never the client's filename. */
+    /**
+     * Stored under a framework-generated name — never the client's filename.
+     *
+     * ⚠ The `uploads` disk is configured `'throw' => false`, which reads as "a
+     * write failure is silent". It is not, and that gap produced a bare 500 on
+     * a live VPS:
+     *
+     *   - Laravel's FilesystemAdapter catches only UnableToWriteFile and
+     *     UnableToSetVisibility. Flysystem creates `products/` on the first
+     *     upload, and if that mkdir fails it throws UnableToCreateDirectory,
+     *     which nothing catches — so a plain directory-permission problem
+     *     crashed the whole request with no usable message.
+     *   - When the failure IS swallowed, putFile() returns `false`, which would
+     *     otherwise be written into image_path as an empty value: a product
+     *     that looks saved and has no picture.
+     *
+     * Both now surface as a validation error on the field the admin touched,
+     * with the real cause in the log.
+     */
     private function storeImage(ProductRequest $request): ?string
     {
         if (! $request->hasFile('image')) {
             return null;
         }
 
-        return Storage::disk('uploads')->putFile('products', $request->file('image'));
+        try {
+            $path = Storage::disk('uploads')->putFile('products', $request->file('image'));
+        } catch (FilesystemException $e) {
+            $this->failUpload($e->getMessage());
+        }
+
+        if (! is_string($path) || $path === '') {
+            $this->failUpload('putFile() returned no path.');
+        }
+
+        return $path;
+    }
+
+    /**
+     * Turn a storage failure into something the admin can act on.
+     *
+     * The detail goes to the log, not the screen: the message carries absolute
+     * server paths, which do not belong in a rendered response (§17).
+     */
+    private function failUpload(string $reason): never
+    {
+        Log::error('Product image upload failed.', [
+            'disk_root' => config('filesystems.disks.uploads.root'),
+            'reason' => $reason,
+        ]);
+
+        throw ValidationException::withMessages([
+            'image' => 'The image could not be saved. The uploads folder is most '
+                .'likely not writable by the web server — see DEPLOYMENT.md. '
+                .'The product itself was not saved.',
+        ]);
     }
 
     private function deleteImage(?string $path): void
