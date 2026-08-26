@@ -1,12 +1,12 @@
 # Session Memory - Basic Custom E-Commerce
-> Last updated: 2026-08-27 03:45
+> Last updated: 2026-08-27 04:30
 
 ## Session Context
 - **Project**: Basic Custom E-Commerce
 - **Profile**: `~/Desktop/CS/Projects/06-basic-ecom.md`
-- **Branch**: master — Ph2 `43035bf`, Ph3 `23bb05a`, Ph4 `448979a`, Ph5 `4c31125`, Ph6 `735219d`, Ph7 `5c42880`, Ph8a `14e57a1`
+- **Branch**: master — Ph2 `43035bf`, Ph3 `23bb05a`, Ph4 `448979a`, Ph5 `4c31125`, Ph6 `735219d`, Ph7 `5c42880`, Ph8a `14e57a1`, Ph9 `8979096`
 - **Status**: active — Planning.md APPROVED 2026-08-26. Phase 2 complete, Phase 3 next.
-- **Focus**: Phase 9 — Admin panel (orders, settings, shipments). **8b still blocked on OQ-13.**
+- **Focus**: Phase 10 — Security & Testing (full purchase flow). **8b still blocked on OQ-13.**
 
 ## Current Tasks
 - [x] Phase 0 Intake — name, work mode, deploy target, database
@@ -21,7 +21,9 @@
 - [x] **Phase 6 — Cart & Checkout**: CartService, cart screens, CheckoutRequest, order creation + confirmation
 - [x] **Phase 7 — Payment**: ToyyibPayService (fail-closed), PaymentController, settlement transaction. **Built; cannot settle live until OQ-11**
 - [x] **Phase 8a — Shipping rates**: EasyParcelService (OAuth + rotation mutex), quotations, flat-rate fallback, checkout rate picker, admin Integrations screen
-- [ ] **Phase 9 — Admin**: order list/detail/status, settings screen, dashboard polish
+- [x] **Phase 9 — Admin**: order list/detail/status/refund, settings, integrations screen
+- [ ] **Phase 10 — Security & Testing**: full purchase-flow coverage, security sweep
+- [ ] **Phase 11 — Deployment**: production instructions + client handoff
 - [ ] **Phase 8b — Booking/AWB/tracking** (REQ-013). **BLOCKED on OQ-13**
 - [ ] **OQ-13 blocks Phase 8b** — read `shipment/submit` + `shipment/pay` payloads from `github.com/easyparcel/OpenAPI` and record them. Booking code cannot be written first (§3)
 - [ ] **OQ-03 first** — is EasyParcel on the Open API (OAuth) or legacy Connect (flat key)? Changes Phase 8 design + table count
@@ -140,7 +142,10 @@
 - **159 tests / 400 assertions green on SQLite AND MariaDB 10.4.28**, 20 shipping/OAuth-specific, all `Http::fake()`.
 - Proven by test: decimal-string → sen conversion · cheapest-first ordering · ISO 3166-2 codes in the request · flat-rate fallback on API failure / non-JSON body / disconnected / failed refresh · **refresh token rotation persisted** · `state` nonce mismatch rejected and single-use · tokens encrypted at rest and never rendered · **chosen courier re-priced server-side, posted price ignored** · unavailable service falls back to flat.
 - ⚠ **Weight unit is unverified (OQ-13)** — `EASYPARCEL_WEIGHT_UNIT` defaults to `kg`.
-- Next: **Phase 9 — Admin.** Order list/detail with status updates, payment + shipping info, settings screen. Then Phase 10 security/testing, Phase 11 deployment. **8b booking stays blocked on OQ-13.**
+- **179 tests / 469 assertions green on SQLite AND MariaDB 10.4.28.**
+- **Key admin constraint, tested**: the admin **cannot mark an order paid** — payment status is gateway-driven only. The single permitted payment-status change is recording a refund, allowed only from `paid`, moving no money.
+- Live: all six admin screens 200 after login; order detail renders the snapshot, resolves `MY-07` → Pulau Pinang, shows the flat-rate badge, hides "Mark as refunded" on an unpaid order.
+- Next: **Phase 10 — Security & Testing.** Full purchase-flow coverage per spec §32, security sweep per §17. Then **Phase 11 deployment + client handoff** (`52-handoff-protocol.md`). **8b booking stays blocked on OQ-13.**
 
 ### Key Context for Next Session
 - **The payment path fails closed on purpose.** If payments don't settle in testing, check `Planning.md` §11.A.6 before assuming a bug.

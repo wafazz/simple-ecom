@@ -2,7 +2,7 @@
 
 > **Status**: Active | **Last Updated**: 2026-08-26 | **Maintainer**: Iris / CoreSentinel
 
-> **Planning.md approved 2026-08-26. Phases 2–7 and 8a complete** (latest `14e57a1`).
+> **Planning.md approved 2026-08-26. Phases 2–9 complete** (8a only; 8b blocked on OQ-13). Latest `8979096`.
 > Database, core MVC, the catalogue, cart, checkout and ToyyibPay payment are built and
 > tested. ⚠ **Payment cannot settle a live transaction until OQ-11 is answered** — the
 > service fails closed by design. EasyParcel and the remaining admin screens are still
@@ -228,6 +228,7 @@ Runtime: the Laravel 12 skeleton only. Dev: `phpunit/phpunit ^11.5`, `laravel/pi
 | 2026-08-27 | **Phase 6 — Cart & Checkout.** CartService (session, variant-keyed), cart screens, CheckoutRequest with ISO 3166-2:MY state validation, order creation in a transaction with server-side totals and the order_items snapshot, confirmation page | `app/Services/CartService.php`, `app/Http/Controllers/{Cart,Checkout}Controller.php`, `app/Http/Requests/CheckoutRequest.php`, `config/shop.php`, `resources/views/storefront/*` | Iris (`735219d`) |
 | 2026-08-27 | **Phase 7 — Payment.** ToyyibPayService with fail-closed verification, PaymentController return/callback handlers, settlement transaction (guarded paid transition + atomic stock decrement), payment result view | `app/Services/ToyyibPayService.php`, `app/Support/PaymentVerification.php`, `app/Http/Controllers/PaymentController.php`, `config/services.php` | Iris (`5c42880`) |
 | 2026-08-27 | **Phase 8a — Shipping rates.** EasyParcelService (OAuth lifecycle with rotation mutex, quotations, flat-rate fallback), ShippingController AJAX endpoint, admin Integrations screen, checkout rate picker with server-side re-pricing | `app/Services/EasyParcelService.php`, `app/Support/ShippingQuote.php`, `app/Http/Controllers/ShippingController.php`, `app/Http/Controllers/Admin/IntegrationController.php`, `resources/views/admin/integrations.blade.php` | Iris (`14e57a1`) |
+| 2026-08-27 | **Phase 9 — Admin.** Order list with filters, order detail (items/customer/payment/shipping), status updates, refund recording, store settings with credential-status-only display | `app/Http/Controllers/Admin/{Order,Setting}Controller.php`, `app/Http/Requests/SettingRequest.php`, `resources/views/admin/orders/*`, `resources/views/admin/settings.blade.php` | Iris (`8979096`) |
 | 2026-08-27 | **Phase 3 — Database.** 10 tables, 4 backed enums, 10 Eloquent models, 8 factories, 3 seeders. Atomic guards implemented and tested: stock decrement, paid transition, shipment booking | `database/migrations/*`, `app/Enums/*`, `app/Models/*`, `database/factories/*`, `database/seeders/*`, `tests/Feature/*` | Iris (`23bb05a`) |
 
 ---

@@ -1,6 +1,6 @@
 # Planning.md — Basic Custom E-Commerce (Laravel 12 / PHP 8.3)
 
-> **Status**: **APPROVED 2026-08-26.** Phases 2–7 and 8a complete; **8b blocked on OQ-13**; Phase 9 (Admin) next.
+> **Status**: **APPROVED 2026-08-26.** Phases 2–9 complete (8a only; **8b blocked on OQ-13**). Phase 10 (Security & Testing) next.
 > **Last Updated**: 2026-08-26
 > **Spec source**: `Prompt.txt` — *CoreSentinel Development Instruction — Laravel 12 Basic Custom E-Commerce* (36 sections)
 > **Agent**: Iris / CoreSentinel · Init Protocol `05-init-protocol.md`
@@ -46,12 +46,12 @@ Status vocabulary: `Planned` | `In-Progress` | `Verified` | `Done`.
 | `REQ-003` | Shopping Cart | `app/Http/Controllers/CartController.php`<br>`app/Services/CartService.php` | `/cart/*` | `tests/Feature/CartTest.php` | `docs/documentation.md#cart` | `Verified` — Phase 6 |
 | `REQ-004` | Checkout & Order Creation | `app/Http/Controllers/CheckoutController.php`<br>`app/Http/Requests/CheckoutRequest.php`<br>`app/Models/{Order,OrderItem}.php` | `/checkout` | `tests/Feature/CheckoutTest.php` | `docs/documentation.md#checkout` | `Verified` — Phase 6 |
 | `REQ-005` | ToyyibPay Payment | `app/Http/Controllers/PaymentController.php`<br>`app/Services/ToyyibPayService.php`<br>`app/Models/Payment.php` | `/payment/*` | `tests/Feature/PaymentTest.php` | `docs/documentation.md#payment` | `In-Progress` — model + migration |
-| `REQ-006` | EasyParcel Shipping Rates | `app/Http/Controllers/ShippingController.php`<br>`app/Http/Controllers/Admin/IntegrationController.php`<br>`app/Services/EasyParcelService.php`<br>`app/Models/IntegrationToken.php` | `/shipping/quote` | `tests/Feature/ShippingTest.php` | `docs/documentation.md#shipping` | `In-Progress` — model + migration + tests |
-| `REQ-007` | Order Management | `app/Http/Controllers/Admin/OrderController.php`<br>`app/Http/Controllers/OrderStatusController.php`<br>`app/Enums/OrderStatus.php` | admin group, `/order-status` | `tests/Feature/OrderTest.php` | `docs/documentation.md#orders` | `In-Progress` — model + migration + tests |
+| `REQ-006` | EasyParcel Shipping Rates | `app/Http/Controllers/ShippingController.php`<br>`app/Http/Controllers/Admin/IntegrationController.php`<br>`app/Services/EasyParcelService.php`<br>`app/Models/IntegrationToken.php` | `/shipping/quote` | `tests/Feature/ShippingTest.php` | `docs/documentation.md#shipping` | `Verified` — Phase 8a |
+| `REQ-007` | Order Management | `app/Http/Controllers/Admin/OrderController.php`<br>`app/Http/Controllers/OrderStatusController.php`<br>`app/Enums/OrderStatus.php` | admin group, `/order-status` | `tests/Feature/OrderTest.php` | `docs/documentation.md#orders` | `Verified` — Phase 9 |
 | `REQ-008` | Inventory / Stock | `app/Models/ProductVariant.php` (guarded decrement)<br>`app/Http/Controllers/Admin/VariationController.php` | admin group | `tests/Feature/InventoryTest.php` | `docs/documentation.md#inventory` | `Verified` — Phase 5 |
-| `REQ-009` | Admin Panel & Auth | `app/Http/Controllers/Admin/{Auth,Dashboard}Controller.php`<br>`app/Models/User.php`<br>`app/Http/Middleware/EnsureAdminIsActive.php` | `/admin/*` | `tests/Feature/Admin/AuthTest.php` | `docs/documentation.md#admin` | `Planned` |
+| `REQ-009` | Admin Panel & Auth | `app/Http/Controllers/Admin/{Auth,Dashboard}Controller.php`<br>`app/Models/User.php`<br>`app/Http/Middleware/EnsureAdminIsActive.php` | `/admin/*` | `tests/Feature/Admin/AuthTest.php` | `docs/documentation.md#admin` | `Verified` — Phase 4/9 |
 | `REQ-010` | Security Controls | `bootstrap/app.php`<br>`app/Http/Requests/*`<br>route middleware groups | all | `tests/Feature/SecurityTest.php` | `docs/documentation.md#security` | `Planned` |
-| `REQ-011` | Store Settings | `app/Http/Controllers/Admin/SettingController.php`<br>`app/Models/Setting.php` | admin group | `tests/Feature/SettingTest.php` | `docs/documentation.md#settings` | `In-Progress` — model + seeder |
+| `REQ-011` | Store Settings | `app/Http/Controllers/Admin/SettingController.php`<br>`app/Models/Setting.php` | admin group | `tests/Feature/SettingTest.php` | `docs/documentation.md#settings` | `Verified` — Phase 9 |
 | `REQ-012` | Error Handling & Logging | `bootstrap/app.php` (`withExceptions`)<br>`config/logging.php`<br>`app/Http/Middleware/AssignRequestId.php` | all | `tests/Feature/ErrorHandlingTest.php` | `docs/documentation.md#logging` | `Planned` |
 | `REQ-013` | **Shipment Booking, AWB & Tracking** | `app/Http/Controllers/Admin/ShipmentController.php`<br>`app/Services/EasyParcelService.php` (booking methods)<br>`app/Models/Shipment.php`<br>`app/Enums/ShipmentStatus.php` | admin group, `/order-status` | `tests/Feature/ShipmentBookingTest.php` | `docs/documentation.md#booking` | `In-Progress` — model + migration + tests |
 
@@ -978,7 +978,7 @@ The client confirmed **MySQL 8.0**, so `DB_CONNECTION=mysql` is correct. Recorde
 | 7 | **Payment** — verified ToyyibPay integration (REQ-005) | ✅ **Built** — commit `5c42880`. 139 tests green on SQLite + MariaDB. **Fails closed: cannot settle a real payment until OQ-11 is answered** |
 | 8a | **Shipping — rates** — verified EasyParcel quotations (REQ-006) | ✅ **Built** — commit `14e57a1`. OAuth + rotation mutex, quotations, flat-rate fallback, checkout rate picker. 159 tests green. Needs a sandbox round trip (OQ-03) |
 | 8b | **Shipping — booking, AWB & tracking** (REQ-013) — `shipments` table, admin booking action, reconciliation screen, tracking | `Planned` — **blocked until the payloads in §11.B.5.1 are read and recorded**. Sandbox-only until then |
-| 9 | **Admin** — dashboard, catalogue, orders, settings (REQ-007/009/011) | `Planned` |
+| 9 | **Admin** — dashboard, catalogue, orders, settings (REQ-007/009/011) | ✅ **Done** — commit `8979096`. Orders list/detail/status/refund, settings, integrations. 179 tests green |
 | 10 | **Security & Testing** — full purchase flow tested (REQ-010/012) | `Planned` |
 | 11 | **Deployment** — production instructions + client handoff | `Planned` |
 
