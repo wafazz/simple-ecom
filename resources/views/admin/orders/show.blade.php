@@ -134,7 +134,26 @@
 
                     <table class="table table-sm mb-0">
                         <tbody>
-                        <tr><th style="width: 9rem">Courier</th><td>{{ $order->courier_name ?? '—' }}</td></tr>
+                        {{-- orders.courier_name records what the CUSTOMER was
+                             quoted, which since REQ-006 is the weight-table
+                             label ("Standard Delivery") — not a carrier. The
+                             real courier only exists once a shipment is booked,
+                             so the two are shown as the separate things they
+                             are rather than one misleading row. --}}
+                        <tr>
+                            <th style="width: 9rem">Delivery charged</th>
+                            <td>{{ $order->courier_name ?? '—' }}</td>
+                        </tr>
+                        <tr>
+                            <th>Courier service</th>
+                            <td>
+                                @if ($order->shipment)
+                                    {{ $order->shipment->courierLabel() }}
+                                @else
+                                    <span class="text-muted">Not booked yet</span>
+                                @endif
+                            </td>
+                        </tr>
                         <tr>
                             <th>Rate source</th>
                             <td>

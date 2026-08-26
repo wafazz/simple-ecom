@@ -166,8 +166,21 @@ class BulkShipmentTest extends TestCase
 
         $this->assertSame(3, Shipment::where('status', ShipmentStatus::Booked->value)->count());
 
-        // Three parcels, three submits. Never more.
-        Http::assertSentCount(3);
+        // Three parcels, three submits. Never more — that count IS the money.
+        // Asserted on submit_orders specifically, not on the total request
+        // count: the batch also makes one quotation call to resolve the
+        // service's display name, and folding that into the same number would
+        // make the assertion stop meaning "charges".
+        $submits = 0;
+        Http::assertSent(function ($request) use (&$submits): bool {
+            if (str_contains($request->url(), 'submit_orders')) {
+                $submits++;
+            }
+
+            return true;
+        });
+
+        $this->assertSame(3, $submits);
     }
 
     #[Test]
@@ -322,6 +335,116 @@ class BulkShipmentTest extends TestCase
         $response->assertRedirect();
         $this->assertStringNotContainsString('_token', $response->headers->get('Location'));
         $this->assertStringContainsString('order_ids', $response->headers->get('Location'));
+    }
+
+    #[Test]
+    public function the_courier_and_awb_show_on_every_fulfilment_status(): void
+    {
+        foreach ([
+            OrderStatus::Processing,
+            OrderStatus::InDelivery,
+            OrderStatus::Completed,
+            OrderStatus::Returned,
+        ] as $status) {
+            $order = $this->order($status);
+            Shipment::factory()->for($order)->booked()->create([
+                'courier_name' => 'J&T',
+                'service_name' => 'J&T — Standard',
+                'awb_no' => 'AWB-'.$status->value,
+            ]);
+
+            $this->actingAs($this->admin)
+                ->get(route('admin.orders.index', ['order_status' => $status->value]))
+                ->assertOk()
+                ->assertSee('Courier &amp; AWB', false)
+                ->assertSee('J&amp;T — Standard', false)
+                ->assertSee('AWB-'.$status->value);
+        }
+    }
+
+    #[Test]
+    public function a_fulfilment_page_shows_the_column_even_with_nothing_booked(): void
+    {
+        // The gap is the useful information here. Hiding the column would
+        // read as "no courier data exists" rather than "this is not booked".
+        $this->order(OrderStatus::Processing);
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.orders.index', ['order_status' => 'processing']))
+            ->assertOk()
+            ->assertSee('Courier &amp; AWB', false)
+            ->assertSee('Not booked');
+    }
+
+    #[Test]
+    public function a_booked_shipment_with_no_awb_yet_says_so_rather_than_looking_empty(): void
+    {
+        // Documented behaviour: EasyParcel returns a null AWB at submit time.
+        $order = $this->order(OrderStatus::Processing);
+        Shipment::factory()->for($order)->create([
+            'status' => ShipmentStatus::Booked,
+            'courier_name' => 'Aramex',
+            'awb_no' => null,
+        ]);
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.orders.index', ['order_status' => 'processing']))
+            ->assertOk()
+            ->assertSee('Aramex')
+            ->assertSee('AWB not issued yet');
+    }
+
+    #[Test]
+    public function the_column_stays_off_a_status_that_has_no_parcels(): void
+    {
+        $this->order(OrderStatus::NewOrder);
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.orders.index', ['order_status' => 'new_order']))
+            ->assertOk()
+            ->assertDontSee('Courier &amp; AWB', false);
+    }
+
+    #[Test]
+    public function the_courier_label_never_invents_a_name(): void
+    {
+        $shipment = Shipment::factory()->create([
+            'courier_name' => null, 'service_name' => null, 'service_id' => 'EP-CS0W',
+        ]);
+
+        // Ugly but true beats a pleasant fiction.
+        $this->assertSame('EP-CS0W', $shipment->courierLabel());
+
+        // And the carrier is not repeated when the label already opens with it.
+        $shipment->forceFill(['courier_name' => 'J&T', 'service_name' => 'J&T — Standard'])->save();
+        $this->assertSame('J&T — Standard', $shipment->fresh()->courierLabel());
+
+        $shipment->forceFill(['courier_name' => 'J&T', 'service_name' => 'Next Day'])->save();
+        $this->assertSame('J&T — Next Day', $shipment->fresh()->courierLabel());
+    }
+
+    #[Test]
+    public function the_service_name_is_resolved_from_the_quotation_not_the_form(): void
+    {
+        // A label the admin could type is a label that can disagree with what
+        // was actually bought.
+        Http::fake([
+            '*/shipment/quotations' => Http::response($this->quotationFake(['EP-CS0W'])),
+            '*/shipment/submit_orders' => Http::response($this->submitFake()),
+        ]);
+
+        $order = $this->order();
+
+        $this->actingAs($this->admin)->post(route('admin.orders.book.store'), [
+            'service_id' => 'EP-CS0W',
+            'order_ids' => [$order->id],
+            'service_name' => 'Totally Made Up Express',
+        ]);
+
+        $shipment = $order->fresh('shipment')->shipment;
+
+        $this->assertSame('Courier EP-CS0W — Standard', $shipment->service_name);
+        $this->assertNotSame('Totally Made Up Express', $shipment->service_name);
     }
 
     #[Test]

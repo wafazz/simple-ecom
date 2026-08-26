@@ -52,6 +52,21 @@
         $bookable = $orders->filter(fn ($o) => $o->canBookShipment());
         $printable = $orders->filter(fn ($o) => $o->hasAwb());
         $anyAction = $movable->isNotEmpty() || $bookable->isNotEmpty() || $printable->isNotEmpty();
+
+        // Courier and AWB belong on the statuses where a parcel exists or is
+        // about to. Shown on those filters even when nothing is booked yet, so
+        // the gap is visible rather than the column simply being absent.
+        $courierStatuses = [
+            \App\Enums\OrderStatus::Processing,
+            \App\Enums\OrderStatus::InDelivery,
+            \App\Enums\OrderStatus::Completed,
+            \App\Enums\OrderStatus::Returned,
+        ];
+        $filtered = ($filters['order_status'] ?? null)
+            ? \App\Enums\OrderStatus::tryFrom($filters['order_status'])
+            : null;
+        $showsCourier = ($filtered && in_array($filtered, $courierStatuses, true))
+            || $orders->contains(fn ($o) => $o->shipment !== null);
     @endphp
 
     {{-- Standalone so the table is not wrapped in a form: each row carries its
@@ -115,6 +130,9 @@
                     <th class="money">Total</th>
                     <th>Payment</th>
                     <th>Status</th>
+                    @if ($showsCourier)
+                        <th>Courier &amp; AWB</th>
+                    @endif
                     <th>Placed</th>
                     <th></th>
                 </tr>
@@ -151,6 +169,28 @@
                         <td class="money"><x-money :minor="$order->grand_total_minor" /></td>
                         <td><x-status-badge :status="$order->payment_status" /></td>
                         <td><x-status-badge :status="$order->order_status" /></td>
+                        @if ($showsCourier)
+                            <td class="small">
+                                @if ($order->shipment)
+                                    {{ $order->shipment->courierLabel() }}
+                                    <div class="text-muted">
+                                        @if ($order->shipment->awb_no)
+                                            AWB <code>{{ $order->shipment->awb_no }}</code>
+                                            @if ($order->shipment->tracking_url)
+                                                <a href="{{ $order->shipment->tracking_url }}" target="_blank"
+                                                   rel="noopener noreferrer">track</a>
+                                            @endif
+                                        @else
+                                            {{-- Documented: EasyParcel returns a null AWB at
+                                                 submit time; the courier issues it shortly after. --}}
+                                            <span class="text-warning">AWB not issued yet</span>
+                                        @endif
+                                    </div>
+                                @else
+                                    <span class="text-muted">Not booked</span>
+                                @endif
+                            </td>
+                        @endif
                         <td class="text-muted small">{{ $order->created_at->format('d M Y H:i') }}</td>
                         <td class="text-end">
                             <div class="d-flex gap-1 justify-content-end align-items-center">
@@ -190,7 +230,7 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="9" class="text-muted text-center py-4">No orders found.</td></tr>
+                    <tr><td colspan="10" class="text-muted text-center py-4">No orders found.</td></tr>
                 @endforelse
                 </tbody>
             </table>

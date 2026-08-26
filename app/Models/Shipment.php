@@ -15,7 +15,7 @@ class Shipment extends Model
     protected $fillable = [
         'order_id', 'provider', 'provider_shipment_ref',
         'awb_no', 'tracking_no', 'tracking_url', 'label_url',
-        'courier_name', 'service_id', 'cost_minor', 'status',
+        'courier_name', 'service_id', 'service_name', 'cost_minor', 'status',
         'raw_response', 'booked_at', 'last_tracked_at',
     ];
 
@@ -28,6 +28,29 @@ class Shipment extends Model
             'booked_at' => 'datetime',
             'last_tracked_at' => 'datetime',
         ];
+    }
+
+    /**
+     * What to show an admin for "courier service".
+     *
+     * Prefers the carrier and the service label; falls back to the raw
+     * EasyParcel id, which is ugly but true. Never invents a name.
+     */
+    public function courierLabel(): string
+    {
+        $parts = array_filter([$this->courier_name, $this->service_name]);
+
+        if ($parts !== []) {
+            // service_name is often already "J&T — Standard"; don't repeat the
+            // carrier when the label already opens with it.
+            if (count($parts) === 2 && str_starts_with((string) $this->service_name, (string) $this->courier_name)) {
+                return (string) $this->service_name;
+            }
+
+            return implode(' — ', $parts);
+        }
+
+        return (string) ($this->service_id ?? '—');
     }
 
     public function order(): BelongsTo

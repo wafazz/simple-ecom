@@ -92,9 +92,14 @@ class ShipmentController extends Controller
         $failed = [];
         $unknown = [];
 
+        // Resolved ONCE, server-side, from a fresh quotation — not taken from
+        // the form. It is only a display label, but a label the admin could
+        // type is a label that can disagree with what was actually bought.
+        $serviceName = $this->resolveServiceName($orders->first(), $data['service_id']);
+
         foreach ($orders as $order) {
             try {
-                $shipment = $booking->book($order, $data['service_id']);
+                $shipment = $booking->book($order, $data['service_id'], $serviceName);
                 $booked[] = $order->order_no.($shipment->awb_no ? " (AWB {$shipment->awb_no})" : '');
             } catch (ShipmentOutcomeUnknown $e) {
                 // May already have been charged. Never retried, by anything.
@@ -141,6 +146,33 @@ class ShipmentController extends Controller
         }
 
         return view('admin.orders.labels', ['orders' => $orders]);
+    }
+
+    /**
+     * The human name of the service being booked.
+     *
+     * One quotation for the batch, not one per order: the label is the same
+     * whichever parcel it is read from, and the id is what actually books.
+     * A failure here costs a nicer listing, never a booking — so it returns
+     * null rather than raising.
+     */
+    private function resolveServiceName(?Order $order, string $serviceId): ?string
+    {
+        if ($order === null) {
+            return null;
+        }
+
+        foreach ($this->easyparcel->courierQuotes(
+            (string) $order->postcode,
+            (string) $order->state,
+            ShipmentPayload::totalWeightG($order),
+        ) as $quote) {
+            if ($quote->serviceId === $serviceId) {
+                return $quote->label();
+            }
+        }
+
+        return null;
     }
 
     /**

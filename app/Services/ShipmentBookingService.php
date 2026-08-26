@@ -36,8 +36,10 @@ class ShipmentBookingService
      *                             chose. Never taken from the order: what the
      *                             customer paid is a weight-table figure, not
      *                             a courier product.
+     * @param  string|null  $serviceName  its human label, resolved server-side
+     *                                    from the quotation, for display only
      */
-    public function book(Order $order, string $serviceId): Shipment
+    public function book(Order $order, string $serviceId, ?string $serviceName = null): Shipment
     {
         $order->loadMissing('items.variant');
 
@@ -52,6 +54,7 @@ class ShipmentBookingService
                 'provider' => 'easyparcel',
                 'status' => ShipmentStatus::PendingSubmit,
                 'service_id' => $serviceId,
+                'service_name' => $serviceName,
             ],
         );
 
@@ -94,13 +97,13 @@ class ShipmentBookingService
             throw $e;
         }
 
-        return $this->record($shipment, $result);
+        return $this->record($shipment, $result, $serviceName);
     }
 
     /**
      * @param  array<string, mixed>  $result
      */
-    private function record(Shipment $shipment, array $result): Shipment
+    private function record(Shipment $shipment, array $result, ?string $serviceName = null): Shipment
     {
         $shipment->forceFill([
             'status' => ShipmentStatus::Booked,
@@ -113,7 +116,10 @@ class ShipmentBookingService
             'tracking_url' => $result['tracking_url'] ?? null,
             'label_url' => data_get($result, 'awb_urls_by_format.A4') ?: ($result['awb_url'] ?: null),
             'courier_name' => $result['courier'] ?? null,
+            // `courier_service` is null in EasyParcel's own success example, so
+            // the id we booked with is kept rather than overwritten by a null.
             'service_id' => $result['courier_service'] ?? $shipment->service_id,
+            'service_name' => $serviceName ?? $shipment->service_name,
             'cost_minor' => $this->costMinor($result),
             'raw_response' => $result,
             'booked_at' => now(),
