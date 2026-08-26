@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Models\Setting;
+use App\Services\CartService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\View;
@@ -15,7 +16,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->scoped(
+            CartService::class,
+            fn ($app) => new CartService($app['session.store'])
+        );
     }
 
     /**
@@ -43,6 +47,7 @@ class AppServiceProvider extends ServiceProvider
                 'storeName' => Setting::get('store_name'),
                 'currency' => Setting::get('currency'),
                 'currencySymbol' => config('shop.currency_symbol'),
+                'cartCount' => app(CartService::class)->count(),
             ]);
         });
     }

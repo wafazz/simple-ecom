@@ -68,10 +68,18 @@
                                 @endif
                             </td>
                             <td class="text-end">
-                                {{-- Add-to-cart arrives in Phase 6. Out-of-stock
-                                     variants will not be addable. --}}
-                                <button type="button" class="btn btn-sm btn-shop" disabled
-                                        title="Cart arrives in Phase 6">Add to cart</button>
+                                @if ($variant->stock_qty > 0)
+                                    <form method="POST" action="{{ route('cart.store') }}" class="d-flex gap-1 justify-content-end">
+                                        @csrf
+                                        <input type="hidden" name="variant_id" value="{{ $variant->id }}">
+                                        <input type="number" name="qty" value="1" min="1"
+                                               max="{{ $variant->stock_qty }}"
+                                               class="form-control form-control-sm" style="width: 4.5rem">
+                                        <button type="submit" class="btn btn-sm btn-shop">Add</button>
+                                    </form>
+                                @else
+                                    <button type="button" class="btn btn-sm btn-secondary" disabled>Unavailable</button>
+                                @endif
                             </td>
                         </tr>
                     @endforeach

@@ -24,6 +24,14 @@
             </ul>
             <ul class="navbar-nav">
                 <li class="nav-item"><a class="nav-link" href="{{ route('order-status.show') }}">Track Order</a></li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ route('cart.index') }}">
+                        Cart
+                        @if ($cartCount > 0)
+                            <span class="badge text-bg-light">{{ $cartCount }}</span>
+                        @endif
+                    </a>
+                </li>
             </ul>
         </div>
     </div>

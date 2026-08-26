@@ -5,6 +5,8 @@ use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\VariationController;
+use App\Http\Controllers\CartController;
+use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\OrderStatusController;
 use App\Http\Controllers\ProductController;
@@ -21,6 +23,17 @@ Route::get('/', [HomeController::class, 'index'])->name('home');
 // Static literals before parameterised routes (spec §21).
 Route::get('/products', [ProductController::class, 'index'])->name('products.index');
 Route::get('/products/{product:slug}', [ProductController::class, 'show'])->name('products.show');
+
+// Cart (REQ-003)
+Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
+Route::post('/cart', [CartController::class, 'store'])->name('cart.store');
+Route::patch('/cart/{variant}', [CartController::class, 'update'])->name('cart.update');
+Route::delete('/cart/{variant}', [CartController::class, 'destroy'])->name('cart.destroy');
+
+// Checkout (REQ-004)
+Route::get('/checkout', [CheckoutController::class, 'create'])->name('checkout.create');
+Route::post('/checkout', [CheckoutController::class, 'store'])->name('checkout.store');
+Route::get('/checkout/confirmation/{orderNo}', [CheckoutController::class, 'confirmation'])->name('checkout.confirmation');
 
 Route::get('/order-status', [OrderStatusController::class, 'show'])->name('order-status.show');
 Route::post('/order-status', [OrderStatusController::class, 'lookup'])->name('order-status.lookup');

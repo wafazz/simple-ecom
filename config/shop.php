@@ -27,6 +27,31 @@ return [
 
     'low_stock_threshold' => 5,
 
+    /*
+     * ISO 3166-2:MY subdivision codes — the vocabulary the EasyParcel Open API
+     * requires (Planning §11.B.1: "the code MY-07 represents the state of
+     * Penang"). Free-text state names are NOT accepted by the quotation API,
+     * which is why the checkout form is a select and not a text input.
+     */
+    'states' => [
+        'MY-01' => 'Johor',
+        'MY-02' => 'Kedah',
+        'MY-03' => 'Kelantan',
+        'MY-04' => 'Melaka',
+        'MY-05' => 'Negeri Sembilan',
+        'MY-06' => 'Pahang',
+        'MY-07' => 'Pulau Pinang',
+        'MY-08' => 'Perak',
+        'MY-09' => 'Perlis',
+        'MY-10' => 'Selangor',
+        'MY-11' => 'Terengganu',
+        'MY-12' => 'Sabah',
+        'MY-13' => 'Sarawak',
+        'MY-14' => 'W.P. Kuala Lumpur',
+        'MY-15' => 'W.P. Labuan',
+        'MY-16' => 'W.P. Putrajaya',
+    ],
+
     // Seconds to cache the settings table. Short enough that an admin edit
     // shows up promptly, long enough to keep it off every page render.
     'settings_cache_ttl' => 60,
