@@ -1,6 +1,6 @@
 # Planning.md — Basic Custom E-Commerce (Laravel 12 / PHP 8.3)
 
-> **Status**: **APPROVED 2026-08-26.** Phase 2 complete; Phase 3 (Database) in progress.
+> **Status**: **APPROVED 2026-08-26.** Phases 2–3 complete; Phase 4 (Core Laravel MVC) next.
 > **Last Updated**: 2026-08-26
 > **Spec source**: `Prompt.txt` — *CoreSentinel Development Instruction — Laravel 12 Basic Custom E-Commerce* (36 sections)
 > **Agent**: Iris / CoreSentinel · Init Protocol `05-init-protocol.md`
@@ -41,19 +41,19 @@ Status vocabulary: `Planned` | `In-Progress` | `Verified` | `Done`.
 
 | Req ID | Feature / Objective | Implementation Files | Routes | Test Files | Documentation | Status |
 |---|---|---|---|---|---|---|
-| `REQ-001` | Product & Category Management | `app/Http/Controllers/Admin/{Product,Category}Controller.php`<br>`app/Models/{Product,Category}.php` | `routes/web.php` (admin group) | `tests/Feature/Admin/CatalogueTest.php` | `docs/documentation.md#catalogue` | `Planned` |
-| `REQ-002` | Product Variations | `app/Http/Controllers/Admin/VariationController.php`<br>`app/Models/ProductVariant.php` | admin group | `tests/Feature/VariationTest.php` | `docs/documentation.md#variations` | `Planned` |
+| `REQ-001` | Product & Category Management | `app/Http/Controllers/Admin/{Product,Category}Controller.php`<br>`app/Models/{Product,Category}.php` | `routes/web.php` (admin group) | `tests/Feature/Admin/CatalogueTest.php` | `docs/documentation.md#catalogue` | `In-Progress` — model + migration |
+| `REQ-002` | Product Variations | `app/Http/Controllers/Admin/VariationController.php`<br>`app/Models/ProductVariant.php` | admin group | `tests/Feature/VariationTest.php` | `docs/documentation.md#variations` | `In-Progress` — model + migration + tests |
 | `REQ-003` | Shopping Cart | `app/Http/Controllers/CartController.php`<br>`app/Services/CartService.php` | `/cart/*` | `tests/Feature/CartTest.php` | `docs/documentation.md#cart` | `Planned` |
-| `REQ-004` | Checkout & Order Creation | `app/Http/Controllers/CheckoutController.php`<br>`app/Http/Requests/CheckoutRequest.php`<br>`app/Models/{Order,OrderItem}.php` | `/checkout` | `tests/Feature/CheckoutTest.php` | `docs/documentation.md#checkout` | `Planned` |
-| `REQ-005` | ToyyibPay Payment | `app/Http/Controllers/PaymentController.php`<br>`app/Services/ToyyibPayService.php`<br>`app/Models/Payment.php` | `/payment/*` | `tests/Feature/PaymentTest.php` | `docs/documentation.md#payment` | `Planned` |
-| `REQ-006` | EasyParcel Shipping Rates | `app/Http/Controllers/ShippingController.php`<br>`app/Http/Controllers/Admin/IntegrationController.php`<br>`app/Services/EasyParcelService.php`<br>`app/Models/IntegrationToken.php` | `/shipping/quote` | `tests/Feature/ShippingTest.php` | `docs/documentation.md#shipping` | `Planned` |
-| `REQ-007` | Order Management | `app/Http/Controllers/Admin/OrderController.php`<br>`app/Http/Controllers/OrderStatusController.php`<br>`app/Enums/OrderStatus.php` | admin group, `/order-status` | `tests/Feature/OrderTest.php` | `docs/documentation.md#orders` | `Planned` |
-| `REQ-008` | Inventory / Stock | `app/Models/ProductVariant.php` (guarded decrement)<br>`app/Http/Controllers/Admin/VariationController.php` | admin group | `tests/Feature/InventoryTest.php` | `docs/documentation.md#inventory` | `Planned` |
+| `REQ-004` | Checkout & Order Creation | `app/Http/Controllers/CheckoutController.php`<br>`app/Http/Requests/CheckoutRequest.php`<br>`app/Models/{Order,OrderItem}.php` | `/checkout` | `tests/Feature/CheckoutTest.php` | `docs/documentation.md#checkout` | `In-Progress` — model + migration + tests |
+| `REQ-005` | ToyyibPay Payment | `app/Http/Controllers/PaymentController.php`<br>`app/Services/ToyyibPayService.php`<br>`app/Models/Payment.php` | `/payment/*` | `tests/Feature/PaymentTest.php` | `docs/documentation.md#payment` | `In-Progress` — model + migration |
+| `REQ-006` | EasyParcel Shipping Rates | `app/Http/Controllers/ShippingController.php`<br>`app/Http/Controllers/Admin/IntegrationController.php`<br>`app/Services/EasyParcelService.php`<br>`app/Models/IntegrationToken.php` | `/shipping/quote` | `tests/Feature/ShippingTest.php` | `docs/documentation.md#shipping` | `In-Progress` — model + migration + tests |
+| `REQ-007` | Order Management | `app/Http/Controllers/Admin/OrderController.php`<br>`app/Http/Controllers/OrderStatusController.php`<br>`app/Enums/OrderStatus.php` | admin group, `/order-status` | `tests/Feature/OrderTest.php` | `docs/documentation.md#orders` | `In-Progress` — model + migration + tests |
+| `REQ-008` | Inventory / Stock | `app/Models/ProductVariant.php` (guarded decrement)<br>`app/Http/Controllers/Admin/VariationController.php` | admin group | `tests/Feature/InventoryTest.php` | `docs/documentation.md#inventory` | `In-Progress` — guarded decrement + tests |
 | `REQ-009` | Admin Panel & Auth | `app/Http/Controllers/Admin/{Auth,Dashboard}Controller.php`<br>`app/Models/User.php`<br>`app/Http/Middleware/EnsureAdminIsActive.php` | `/admin/*` | `tests/Feature/Admin/AuthTest.php` | `docs/documentation.md#admin` | `Planned` |
 | `REQ-010` | Security Controls | `bootstrap/app.php`<br>`app/Http/Requests/*`<br>route middleware groups | all | `tests/Feature/SecurityTest.php` | `docs/documentation.md#security` | `Planned` |
-| `REQ-011` | Store Settings | `app/Http/Controllers/Admin/SettingController.php`<br>`app/Models/Setting.php` | admin group | `tests/Feature/SettingTest.php` | `docs/documentation.md#settings` | `Planned` |
+| `REQ-011` | Store Settings | `app/Http/Controllers/Admin/SettingController.php`<br>`app/Models/Setting.php` | admin group | `tests/Feature/SettingTest.php` | `docs/documentation.md#settings` | `In-Progress` — model + seeder |
 | `REQ-012` | Error Handling & Logging | `bootstrap/app.php` (`withExceptions`)<br>`config/logging.php`<br>`app/Http/Middleware/AssignRequestId.php` | all | `tests/Feature/ErrorHandlingTest.php` | `docs/documentation.md#logging` | `Planned` |
-| `REQ-013` | **Shipment Booking, AWB & Tracking** | `app/Http/Controllers/Admin/ShipmentController.php`<br>`app/Services/EasyParcelService.php` (booking methods)<br>`app/Models/Shipment.php`<br>`app/Enums/ShipmentStatus.php` | admin group, `/order-status` | `tests/Feature/ShipmentBookingTest.php` | `docs/documentation.md#booking` | `Planned` |
+| `REQ-013` | **Shipment Booking, AWB & Tracking** | `app/Http/Controllers/Admin/ShipmentController.php`<br>`app/Services/EasyParcelService.php` (booking methods)<br>`app/Models/Shipment.php`<br>`app/Enums/ShipmentStatus.php` | admin group, `/order-status` | `tests/Feature/ShipmentBookingTest.php` | `docs/documentation.md#booking` | `In-Progress` — model + migration + tests |
 
 Every commit message references its `REQ-0NN`. No orphan code.
 
@@ -971,7 +971,7 @@ The client confirmed **MySQL 8.0**, so `DB_CONNECTION=mysql` is correct. Recorde
 |---|---|---|
 | **1** | **Planning.md** — this document. No application code. | ✅ **Approved 2026-08-26** |
 | 2 | **Laravel Foundation** — install Laravel 12 (no starter kit), configure environment, database connection, base application structure | ✅ **Done** — Laravel 12.68.0, commit `43035bf`. Vite removed, cipher AES-256-GCM, file/file/sync drivers, boots clean |
-| 3 | **Database** — migrations, Eloquent models, relationships, seeders | 🔄 **In progress** |
+| 3 | **Database** — migrations, Eloquent models, relationships, seeders | ✅ **Done** — commit `23bb05a`. 10 tables, 4 enums, 10 models, 8 factories, 3 seeders. 32 tests green; 24 guard tests re-verified on real MariaDB |
 | 4 | **Core Laravel MVC** — routes, controllers, Blade layouts/views, validation, middleware | `Planned` |
 | 5 | **Product** — categories, products, variations, stock (REQ-001/002/008) | `Planned` |
 | 6 | **Cart & Checkout** — session cart, product + variation selection, customer details, shipping address, order creation (REQ-003/004) | `Planned` |

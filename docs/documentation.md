@@ -2,10 +2,11 @@
 
 > **Status**: Active | **Last Updated**: 2026-08-26 | **Maintainer**: Iris / CoreSentinel
 
-> ⚠ **Nothing here is implemented yet.** The project is at Phase 1 (Planning), halted by
-> `Prompt.txt` **§35** pending approval of `Planning.md` §21. Every path below is a
-> **planned target**, recorded so the traceability matrix in `Planning.md` §1 has a
-> documentation anchor to point at. Sections are filled in as each phase lands — see §5.
+> **Planning.md approved 2026-08-26. Phases 2–3 complete** (commits `43035bf`, `23bb05a`).
+> The database layer — migrations, enums, models, relationships, factories, seeders — is
+> built and tested. Controllers, Blade views and the two integration services are still
+> **planned targets**; they land in Phases 4–9. Sections are filled in as each phase
+> lands — see §5.
 
 All `§` references point at **`Prompt.txt`** (36 sections) unless prefixed "Planning".
 
@@ -221,6 +222,8 @@ Runtime: the Laravel 12 skeleton only. Dev: `phpunit/phpunit ^11.5`, `laravel/pi
 | 2026-08-26 | This document created per `53-documentation-protocol.md` §2.2 | `docs/documentation.md` | Iris |
 | 2026-08-26 | **REQ-013 added**: client moved EasyParcel shipment booking, AWB and tracking into scope. Adds `shipments` (10th table), `ShipmentController`, `ShipmentStatus`, booking/reconciliation design, and 5 new open questions (OQ-12…OQ-16). Estimate ~9 → ~11 days | `Planning.md`, `docs/documentation.md` | Iris |
 | 2026-08-26 | Implementation **halted** at the §35 approval gate | — | Iris |
+| 2026-08-26 | **Planning.md APPROVED.** Phase 2 — Laravel 12.68.0 foundation: Vite removed, cipher AES-256-GCM, file/file/sync drivers, config/services.php | `composer.json`, `config/*`, `bootstrap/app.php`, `app/Providers/AppServiceProvider.php` | Iris (`43035bf`) |
+| 2026-08-27 | **Phase 3 — Database.** 10 tables, 4 backed enums, 10 Eloquent models, 8 factories, 3 seeders. Atomic guards implemented and tested: stock decrement, paid transition, shipment booking | `database/migrations/*`, `app/Enums/*`, `app/Models/*`, `database/factories/*`, `database/seeders/*`, `tests/Feature/*` | Iris (`23bb05a`) |
 
 ---
 

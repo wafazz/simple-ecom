@@ -1,12 +1,12 @@
 # Session Memory - Basic Custom E-Commerce
-> Last updated: 2026-08-26 23:30
+> Last updated: 2026-08-27 00:05
 
 ## Session Context
 - **Project**: Basic Custom E-Commerce
 - **Profile**: `~/Desktop/CS/Projects/06-basic-ecom.md`
-- **Branch**: master (git initialised; Phase 2 committed as `43035bf`)
+- **Branch**: master — Phase 2 `43035bf`, Phase 3 `23bb05a`
 - **Status**: active — Planning.md APPROVED 2026-08-26. Phase 2 complete, Phase 3 next.
-- **Focus**: Phase 3 — migrations, models, relationships, seeders (spec §27).
+- **Focus**: Phase 4 — routes, controllers, Blade views, validation, middleware (spec §27).
 
 ## Current Tasks
 - [x] Phase 0 Intake — name, work mode, deploy target, database
@@ -15,7 +15,8 @@
 - [x] Rewrite `Planning.md` against the client's 36-section spec (11 phases, Cart/Checkout Design sections)
 - [x] **Planning.md APPROVED** by client 2026-08-26
 - [x] **Phase 2 — Laravel 12 foundation** (installed, configured, verified, committed)
-- [ ] **Phase 3 — Database**: migrations, models, relationships, seeders
+- [x] **Phase 3 — Database**: 10 tables, 4 enums, 10 models, 8 factories, 3 seeders
+- [ ] **Phase 4 — Core Laravel MVC**: routes, controllers, Blade layouts, validation, middleware
 - [ ] **OQ-13 blocks Phase 8b** — read `shipment/submit` + `shipment/pay` payloads from `github.com/easyparcel/OpenAPI` and record them. Booking code cannot be written first (§3)
 - [ ] **OQ-03 first** — is EasyParcel on the Open API (OAuth) or legacy Connect (flat key)? Changes Phase 8 design + table count
 - [ ] Verify ToyyibPay `getBillTransactions` field names against the official reference (human, browser)
@@ -91,9 +92,11 @@
 - Applied 5 patterns from `11-pattern-library.md`: atomic race-free guard, integer minor units, variants-without-EAV, soft-deletes/unique-index, encrypted secrets at rest.
 
 ### Where We Left Off
-- **Phase 2 done and committed** (`43035bf`). App boots, `/` and `/up` return 200, 2/2 tests pass, pint clean, audit clean.
-- Verified working: AES-256-GCM encrypt/decrypt **and tamper rejection**; DB connection to `basic_ecom`.
-- Next: **Phase 3 — Database.** Trim skeleton migrations (delete cache + jobs; strip `password_reset_tokens` and `sessions` from the users migration), then write the 10 application tables, models, relationships and seeders.
+- **Phases 2 and 3 done and committed** (`43035bf`, `23bb05a`).
+- **32 tests / 73 assertions green** on SQLite; the 24 guard tests **re-run green against real MariaDB 10.4.28** (Planning §16 requires this — SQLite does not tell the truth about guarded UPDATEs). Pint clean, `composer audit` clean.
+- Proven by test, not assumed: variant combination uniqueness incl. the two-option-less-variants NULL trap · atomic stock decrement refusing to oversell · idempotent paid transition · shipment double-booking rejected · `needs_reconciliation` never retryable · tokens encrypted at rest and hidden from `toArray()`.
+- Test DB `basic_ecom_test` exists on port 3307 for the MariaDB run.
+- Next: **Phase 4 — Core Laravel MVC.** Routes, controllers, Blade layout + components, validation, middleware (`EnsureAdminIsActive`, `AssignRequestId`).
 
 ### Key Context for Next Session
 - **The payment path fails closed on purpose.** If payments don't settle in testing, check `Planning.md` §11.A.6 before assuming a bug.
