@@ -1,32 +1,88 @@
-/* Basic Custom E-Commerce — Planning §12.2 (OQ-10, Option 2: no Vite, no Node).
-   Served directly from public/ and referenced with asset(). Bootstrap 5.3 is
-   dropped in alongside this file; this sheet holds only what Bootstrap doesn't.
-   Phase 4 builds the real layout on top. */
+/* Basic Custom E-Commerce — Planning §12.2.
+   Loaded AFTER bootstrap.min.css. Holds only what Bootstrap does not:
+   store identity and a few commerce-specific bits. No build step. */
 
 :root {
-    --ink: #1c1f23;
-    --muted: #6b7280;
-    --line: #e5e7eb;
-    --bg: #ffffff;
-    --accent: #0f766e;
+    --shop-accent: #0f766e;
+    --shop-accent-dark: #115e59;
 }
-
-* { box-sizing: border-box; }
 
 body {
-    margin: 0;
-    background: var(--bg);
-    color: var(--ink);
-    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    line-height: 1.55;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
 }
 
-.wrap { max-width: 60rem; margin: 0 auto; padding: 2rem 1.25rem; }
-.muted { color: var(--muted); }
-.card { border: 1px solid var(--line); border-radius: .5rem; padding: 1.25rem; }
+main {
+    flex: 1 0 auto;
+}
 
-table.check { width: 100%; border-collapse: collapse; }
-table.check th,
-table.check td { text-align: left; padding: .45rem .6rem; border-bottom: 1px solid var(--line); }
-table.check th { font-weight: 600; width: 14rem; }
-code { background: #f3f4f6; padding: .1rem .35rem; border-radius: .25rem; }
+.navbar-shop {
+    background: var(--shop-accent);
+}
+
+.navbar-shop .navbar-brand,
+.navbar-shop .nav-link {
+    color: #fff;
+}
+
+.navbar-shop .nav-link:hover {
+    color: rgba(255, 255, 255, .8);
+}
+
+.btn-shop {
+    background: var(--shop-accent);
+    border-color: var(--shop-accent);
+    color: #fff;
+}
+
+.btn-shop:hover,
+.btn-shop:focus {
+    background: var(--shop-accent-dark);
+    border-color: var(--shop-accent-dark);
+    color: #fff;
+}
+
+/* Money is right-aligned and tabular so columns line up and digits do not
+   jitter between rows. */
+.money {
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+td.money,
+th.money {
+    text-align: right;
+}
+
+.product-thumb {
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    width: 100%;
+    background: #f1f3f5;
+}
+
+.admin-sidebar {
+    min-height: 100%;
+    background: #1c1f23;
+}
+
+.admin-sidebar .nav-link {
+    color: #cbd2d9;
+    border-radius: .35rem;
+}
+
+.admin-sidebar .nav-link:hover {
+    background: rgba(255, 255, 255, .06);
+    color: #fff;
+}
+
+.admin-sidebar .nav-link.active {
+    background: var(--shop-accent);
+    color: #fff;
+}
+
+footer.shop-footer {
+    border-top: 1px solid #dee2e6;
+    font-size: .875rem;
+}
