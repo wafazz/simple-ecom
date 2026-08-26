@@ -1,12 +1,12 @@
 # Session Memory - Basic Custom E-Commerce
-> Last updated: 2026-08-27 05:15
+> Last updated: 2026-08-27 06:00
 
 ## Session Context
 - **Project**: Basic Custom E-Commerce
 - **Profile**: `~/Desktop/CS/Projects/06-basic-ecom.md`
-- **Branch**: master — Ph2…Ph9 as before, Ph10 `96940dd`
-- **Status**: active — Planning.md APPROVED 2026-08-26. Phase 2 complete, Phase 3 next.
-- **Focus**: Phase 11 — Deployment instructions + client handoff. **8b still blocked on OQ-13.**
+- **Branch**: master — Ph2…Ph10 as before, Ph11 `68b54a7`
+- **Status**: **DELIVERED** — Phases 1–11 complete. Two items outstanding with the client (OQ-11, OQ-13).
+- **Focus**: Handed off. Resume only when OQ-11 (payment fields) or OQ-13 (booking payloads) is answered.
 
 ## Current Tasks
 - [x] Phase 0 Intake — name, work mode, deploy target, database
@@ -23,7 +23,7 @@
 - [x] **Phase 8a — Shipping rates**: EasyParcelService (OAuth + rotation mutex), quotations, flat-rate fallback, checkout rate picker, admin Integrations screen
 - [x] **Phase 9 — Admin**: order list/detail/status/refund, settings, integrations screen
 - [x] **Phase 10 — Security & Testing**: E2E purchase flow + both-APIs-down flow, §17 manipulation sweep, grep audit
-- [ ] **Phase 11 — Deployment**: production instructions + client handoff
+- [x] **Phase 11 — Deployment**: `DEPLOYMENT.md`, admin credential hardening, handoff artifact published
 - [ ] **Phase 8b — Booking/AWB/tracking** (REQ-013). **BLOCKED on OQ-13**
 - [ ] **OQ-13 blocks Phase 8b** — read `shipment/submit` + `shipment/pay` payloads from `github.com/easyparcel/OpenAPI` and record them. Booking code cannot be written first (§3)
 - [ ] **OQ-03 first** — is EasyParcel on the Open API (OAuth) or legacy Connect (flat key)? Changes Phase 8 design + table count
@@ -152,7 +152,10 @@
 - **192 tests / 538 assertions green on SQLite AND MariaDB 10.4.28.** All 21 suites listed under spec §32's areas.
 - **E2E proven**: browse → two distinct variations → live quote → checkout → gateway → callback → settled (stock decremented once) → customer tracks → admin sees. And the same flow with **both APIs down**: order completes at the flat rate, nothing marked paid, no stock moved.
 - Production config verified: `APP_DEBUG=false`, AES-256-GCM, encrypted lax http-only sessions. `composer audit` clean. `.env` untracked.
-- Next: **Phase 11 — Deployment.** Rewrite `DEPLOYMENT.md` for the VPS sequence (Planning §17), then client handoff per `52-handoff-protocol.md`. **8b booking stays blocked on OQ-13; REQ-005 cannot settle live until OQ-11.**
+- **199 tests / 564 assertions green on SQLite AND MariaDB 10.4.28.** 11 of 11 phases done; 12 of 13 requirements delivered.
+- **Phase 11 added what Planning §17.4 promised but never implemented**: `users.must_change_password` + `RequirePasswordChange` middleware, `AdminSeeder` refusing to run in production without env credentials, and `php artisan shop:create-admin` (prompts via `secret()`). Live-verified: login → every screen redirects to the password form → change → access restored.
+- **Handoff artifact published** (private): https://claude.ai/code/artifact/8e821ef2-9501-4fcc-8b02-df30a4921d29 — contains no credentials, per `52-handoff-protocol.md`.
+- **Resume triggers**: OQ-11 answered → adjust `ToyyibPayService` candidate keys + `TOYYIBPAY_AMOUNT_FORMAT`, then live payments settle. OQ-13 answered → build Phase 8b booking (~2 days) against the design already written in Planning §11.B.5.
 
 ### Key Context for Next Session
 - **The payment path fails closed on purpose.** If payments don't settle in testing, check `Planning.md` §11.A.6 before assuming a bug.

@@ -2,7 +2,7 @@
 
 > **Status**: Active | **Last Updated**: 2026-08-26 | **Maintainer**: Iris / CoreSentinel
 
-> **Planning.md approved 2026-08-26. Phases 2–10 complete** (8a only; 8b blocked on OQ-13). Latest `96940dd`.
+> **DELIVERED 2026-08-27. Phases 1–11 complete.** REQ-013 not built (blocked on OQ-13); REQ-005 cannot settle live until OQ-11. Latest `68b54a7`.
 > Database, core MVC, the catalogue, cart, checkout and ToyyibPay payment are built and
 > tested. ⚠ **Payment cannot settle a live transaction until OQ-11 is answered** — the
 > service fails closed by design. EasyParcel and the remaining admin screens are still
@@ -230,6 +230,7 @@ Runtime: the Laravel 12 skeleton only. Dev: `phpunit/phpunit ^11.5`, `laravel/pi
 | 2026-08-27 | **Phase 8a — Shipping rates.** EasyParcelService (OAuth lifecycle with rotation mutex, quotations, flat-rate fallback), ShippingController AJAX endpoint, admin Integrations screen, checkout rate picker with server-side re-pricing | `app/Services/EasyParcelService.php`, `app/Support/ShippingQuote.php`, `app/Http/Controllers/ShippingController.php`, `app/Http/Controllers/Admin/IntegrationController.php`, `resources/views/admin/integrations.blade.php` | Iris (`14e57a1`) |
 | 2026-08-27 | **Phase 9 — Admin.** Order list with filters, order detail (items/customer/payment/shipping), status updates, refund recording, store settings with credential-status-only display | `app/Http/Controllers/Admin/{Order,Setting}Controller.php`, `app/Http/Requests/SettingRequest.php`, `resources/views/admin/orders/*`, `resources/views/admin/settings.blade.php` | Iris (`8979096`) |
 | 2026-08-27 | **Phase 10 — Security & Testing.** End-to-end purchase flow and both-APIs-down flow; spec §17 manipulation sweep; grep audit for banned patterns | `tests/Feature/PurchaseFlowTest.php`, `tests/Feature/SecurityManipulationTest.php` | Iris (`96940dd`) |
+| 2026-08-27 | **Phase 11 — Deployment.** DEPLOYMENT.md VPS runbook; `users.must_change_password` + RequirePasswordChange middleware; AdminSeeder refuses default credentials in production; `shop:create-admin` command; README updated for handoff | `DEPLOYMENT.md`, `README.md`, `app/Http/Middleware/RequirePasswordChange.php`, `app/Console/Commands/CreateAdminCommand.php`, `database/seeders/AdminSeeder.php` | Iris (`68b54a7`) |
 | 2026-08-27 | **Phase 3 — Database.** 10 tables, 4 backed enums, 10 Eloquent models, 8 factories, 3 seeders. Atomic guards implemented and tested: stock decrement, paid transition, shipment booking | `database/migrations/*`, `app/Enums/*`, `app/Models/*`, `database/factories/*`, `database/seeders/*`, `tests/Feature/*` | Iris (`23bb05a`) |
 
 ---

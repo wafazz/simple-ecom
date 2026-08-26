@@ -1,6 +1,6 @@
 # Planning.md — Basic Custom E-Commerce (Laravel 12 / PHP 8.3)
 
-> **Status**: **APPROVED 2026-08-26.** Phases 2–10 complete (8a only; **8b blocked on OQ-13**). Phase 11 (Deployment) next.
+> **Status**: **DELIVERED 2026-08-27.** Phases 1–11 complete. REQ-013 (8b) **not built — blocked on OQ-13**; REQ-005 cannot settle live until **OQ-11**.
 > **Last Updated**: 2026-08-26
 > **Spec source**: `Prompt.txt` — *CoreSentinel Development Instruction — Laravel 12 Basic Custom E-Commerce* (36 sections)
 > **Agent**: Iris / CoreSentinel · Init Protocol `05-init-protocol.md`
@@ -980,7 +980,7 @@ The client confirmed **MySQL 8.0**, so `DB_CONNECTION=mysql` is correct. Recorde
 | 8b | **Shipping — booking, AWB & tracking** (REQ-013) — `shipments` table, admin booking action, reconciliation screen, tracking | `Planned` — **blocked until the payloads in §11.B.5.1 are read and recorded**. Sandbox-only until then |
 | 9 | **Admin** — dashboard, catalogue, orders, settings (REQ-007/009/011) | ✅ **Done** — commit `8979096`. Orders list/detail/status/refund, settings, integrations. 179 tests green |
 | 10 | **Security & Testing** — full purchase flow tested (REQ-010/012) | ✅ **Done** — commit `96940dd`. E2E flow + outage flow; §17 manipulation sweep. 192 tests / 538 assertions green on SQLite + MariaDB |
-| 11 | **Deployment** — production instructions + client handoff | `Planned` |
+| 11 | **Deployment** — production instructions + client handoff | ✅ **Done** — commit `68b54a7`. `DEPLOYMENT.md`, forced admin password change, `shop:create-admin`. Handoff artifact published |
 
 ---
 
