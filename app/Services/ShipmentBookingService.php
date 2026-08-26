@@ -31,7 +31,13 @@ class ShipmentBookingService
 {
     public function __construct(private readonly EasyParcelService $easyParcel) {}
 
-    public function book(Order $order): Shipment
+    /**
+     * @param  string  $serviceId  the EasyParcel courier service the admin
+     *                             chose. Never taken from the order: what the
+     *                             customer paid is a weight-table figure, not
+     *                             a courier product.
+     */
+    public function book(Order $order, string $serviceId): Shipment
     {
         $order->loadMissing('items.variant');
 
@@ -42,7 +48,11 @@ class ShipmentBookingService
         // system would ever show that the money left.
         $shipment = Shipment::firstOrCreate(
             ['order_id' => $order->id],
-            ['provider' => 'easyparcel', 'status' => ShipmentStatus::PendingSubmit],
+            [
+                'provider' => 'easyparcel',
+                'status' => ShipmentStatus::PendingSubmit,
+                'service_id' => $serviceId,
+            ],
         );
 
         if (! $shipment->status->isRetryable()) {
@@ -58,7 +68,7 @@ class ShipmentBookingService
         }
 
         try {
-            $result = $this->easyParcel->submitOrder(ShipmentPayload::for($order));
+            $result = $this->easyParcel->submitOrder(ShipmentPayload::for($order, $serviceId));
         } catch (ShipmentOutcomeUnknown $e) {
             // NOT `failed` — failed is retryable and this must never be
             // retried. An admin clears it against the EasyParcel dashboard.

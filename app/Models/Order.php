@@ -45,6 +45,45 @@ class Order extends Model
         return $this->hasOne(Payment::class);
     }
 
+    /**
+     * Can a courier still be booked for this order? REQ-013.
+     *
+     * False once an AWB exists — that is the request "if order already
+     * assigned AWB, disable book courier", and it is also the money guard:
+     * a booked shipment has already been paid for out of the store's courier
+     * credit, and `UNIQUE(shipments.order_id)` would reject a second one
+     * anyway. This just stops the admin being offered the click.
+     */
+    public function canBookShipment(): bool
+    {
+        if ($this->payment_status !== PaymentStatus::Paid) {
+            return false;
+        }
+
+        if (! $this->order_status->allowsShipmentBooking()) {
+            return false;
+        }
+
+        $shipment = $this->shipment;
+
+        // No shipment row yet, or a previous attempt that provably charged
+        // nothing (failed / never submitted). `needs_reconciliation` is
+        // deliberately NOT retryable — see ShipmentStatus.
+        return $shipment === null || $shipment->status->isRetryable();
+    }
+
+    /** Has the courier issued an airway bill for this order? */
+    public function hasAwb(): bool
+    {
+        return filled($this->shipment?->awb_no);
+    }
+
+    /** Is there a label an admin can actually print? */
+    public function hasLabel(): bool
+    {
+        return filled($this->shipment?->label_url);
+    }
+
     public function shipment(): HasOne
     {
         return $this->hasOne(Shipment::class);

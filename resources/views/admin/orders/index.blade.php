@@ -46,24 +46,52 @@
     </form>
 
     @php
-        // How many rows on THIS page can actually move. Nothing is offered for
-        // an order that would only be refused.
+        // What this page can actually offer. Nothing is shown for an order it
+        // would only be refused on.
         $movable = $orders->filter(fn ($o) => $o->order_status->canStartProcessing());
+        $bookable = $orders->filter(fn ($o) => $o->canBookShipment());
+        $printable = $orders->filter(fn ($o) => $o->hasAwb());
+        $anyAction = $movable->isNotEmpty() || $bookable->isNotEmpty() || $printable->isNotEmpty();
     @endphp
 
     {{-- Standalone so the table is not wrapped in a form: each row carries its
          own single-order form, and nesting those inside a bulk form would be
-         invalid HTML. The checkboxes reach this one by its id instead. --}}
-    <form method="POST" action="{{ route('admin.orders.process') }}" id="bulk-process">
-        @csrf @method('PATCH')
+         invalid HTML. The checkboxes reach this one by its id instead.
+
+         One POST form for every action. A button with formmethod="get" would
+         put the CSRF token in the query string, and from there into the access
+         log — so the two read-only screens are reached by redirect instead. --}}
+    <form method="POST" action="{{ route('admin.orders.bulk') }}" id="bulk-process">
+        @csrf
     </form>
 
-    @if ($movable->isNotEmpty())
-        <div class="d-flex align-items-center gap-2 mb-2" data-bulk-bar hidden>
+    @if ($anyAction)
+        <div class="d-flex align-items-center flex-wrap gap-2 mb-2" data-bulk-bar hidden>
             <span class="text-muted small"><strong data-bulk-count>0</strong> selected</span>
-            <button type="submit" form="bulk-process" class="btn btn-sm btn-shop">
-                <i class="bi bi-arrow-right-circle me-1"></i>Move to Processing
-            </button>
+
+            @if ($movable->isNotEmpty())
+                <button type="submit" form="bulk-process" name="bulk_action" value="process"
+                        class="btn btn-sm btn-shop">
+                    <i class="bi bi-arrow-right-circle me-1"></i>Move to Processing
+                </button>
+            @endif
+
+            @if ($bookable->isNotEmpty())
+                {{-- Goes to a confirmation screen that quotes first. This
+                     button charges nothing on its own. --}}
+                <button type="submit" form="bulk-process" name="bulk_action" value="book"
+                        class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-truck me-1"></i>Book courier…
+                </button>
+            @endif
+
+            @if ($printable->isNotEmpty())
+                <button type="submit" form="bulk-process" name="bulk_action" value="awb"
+                        class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-printer me-1"></i>Print AWB
+                </button>
+            @endif
+
             <button type="button" class="btn btn-sm btn-link text-decoration-none" data-bulk-clear>
                 Clear
             </button>
@@ -76,9 +104,9 @@
                 <thead>
                 <tr>
                     <th style="width: 2.5rem">
-                        @if ($movable->isNotEmpty())
+                        @if ($anyAction)
                             <input type="checkbox" class="form-check-input" data-select-all
-                                   aria-label="Select all new orders on this page">
+                                   aria-label="Select all orders on this page">
                         @endif
                     </th>
                     <th>Order</th>
@@ -93,12 +121,18 @@
                 </thead>
                 <tbody>
                 @forelse ($orders as $order)
-                    @php $canProcess = $order->order_status->canStartProcessing(); @endphp
+                    @php
+                        $canProcess = $order->order_status->canStartProcessing();
+                        $canBook = $order->canBookShipment();
+                        $canPrint = $order->hasAwb();
+                    @endphp
                     <tr>
                         <td>
-                            @if ($canProcess)
+                            @if ($canProcess || $canBook || $canPrint)
                                 {{-- Associated to the bulk form by id, so the
-                                     table itself stays outside any form. --}}
+                                     table itself stays outside any form. Each
+                                     action decides for itself what it can use
+                                     and reports whatever it skipped. --}}
                                 <input type="checkbox" class="form-check-input" form="bulk-process"
                                        name="order_ids[]" value="{{ $order->id }}" data-row-check
                                        aria-label="Select order {{ $order->order_no }}">
@@ -119,17 +153,40 @@
                         <td><x-status-badge :status="$order->order_status" /></td>
                         <td class="text-muted small">{{ $order->created_at->format('d M Y H:i') }}</td>
                         <td class="text-end">
-                            @if ($canProcess)
-                                {{-- Its own form, so this button moves exactly
-                                     this order regardless of what is ticked. --}}
-                                <form method="POST" action="{{ route('admin.orders.process') }}">
-                                    @csrf @method('PATCH')
-                                    <input type="hidden" name="order_ids[]" value="{{ $order->id }}">
-                                    <button class="btn btn-sm btn-outline-primary text-nowrap">
-                                        Move to Processing
-                                    </button>
-                                </form>
-                            @endif
+                            <div class="d-flex gap-1 justify-content-end align-items-center">
+                                @if ($canProcess)
+                                    {{-- Its own form, so this button moves exactly
+                                         this order regardless of what is ticked. --}}
+                                    <form method="POST" action="{{ route('admin.orders.process') }}">
+                                        @csrf @method('PATCH')
+                                        <input type="hidden" name="order_ids[]" value="{{ $order->id }}">
+                                        <button class="btn btn-sm btn-outline-primary text-nowrap">
+                                            Move to Processing
+                                        </button>
+                                    </form>
+                                @endif
+
+                                @if ($canBook)
+                                    {{-- A link, not a form: this only opens the
+                                         quote-and-confirm screen. --}}
+                                    <a href="{{ route('admin.orders.book', ['order_ids' => [$order->id]]) }}"
+                                       class="btn btn-sm btn-outline-primary text-nowrap">
+                                        <i class="bi bi-truck me-1"></i>Book courier…
+                                    </a>
+                                @elseif ($canPrint)
+                                    {{-- Already has an AWB, so booking is off
+                                         the table entirely — printing is what
+                                         is left to do. --}}
+                                    <a href="{{ route('admin.orders.awb', ['order_ids' => [$order->id]]) }}"
+                                       class="btn btn-sm btn-outline-secondary text-nowrap">
+                                        <i class="bi bi-printer me-1"></i>Print AWB
+                                    </a>
+                                @elseif ($order->shipment)
+                                    <span class="badge text-bg-warning text-nowrap">
+                                        {{ $order->shipment->status->label() }}
+                                    </span>
+                                @endif
+                            </div>
                         </td>
                     </tr>
                 @empty

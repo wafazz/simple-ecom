@@ -69,7 +69,7 @@ class ShipmentPayloadTest extends TestCase
     public function grams_and_millimetres_become_kilograms_and_centimetres(): void
     {
         // The single most expensive mistake available here.
-        $parcel = ShipmentPayload::for($this->bookableOrder())['shipment'][0];
+        $parcel = ShipmentPayload::for($this->bookableOrder(), 'EP-CS0W')['shipment'][0];
 
         $this->assertSame(0.8, $parcel['weight']);   // 400 g × 2
         $this->assertSame(30.0, $parcel['length']);  // 300 mm
@@ -83,7 +83,7 @@ class ShipmentPayloadTest extends TestCase
         // Nothing may be submitted at zero size — the courier rejects it.
         $parcel = ShipmentPayload::for($this->bookableOrder([
             'length_mm' => 0, 'width_mm' => 0, 'height_mm' => 0,
-        ]))['shipment'][0];
+        ]), 'EP-CS0W')['shipment'][0];
 
         $this->assertSame(25.0, $parcel['length']);
         $this->assertSame(18.0, $parcel['width']);
@@ -93,7 +93,7 @@ class ShipmentPayloadTest extends TestCase
     #[Test]
     public function every_field_the_api_marks_required_is_present(): void
     {
-        $parcel = ShipmentPayload::for($this->bookableOrder())['shipment'][0];
+        $parcel = ShipmentPayload::for($this->bookableOrder(), 'EP-CS0W')['shipment'][0];
 
         foreach (['service_id', 'collection_date', 'weight', 'height', 'length',
             'width', 'item', 'sender', 'receiver', 'feature'] as $key) {
@@ -119,7 +119,7 @@ class ShipmentPayloadTest extends TestCase
 
         $this->assertSame(
             now()->addDays(2)->format('Y-m-d'),
-            ShipmentPayload::for($this->bookableOrder())['shipment'][0]['collection_date']
+            ShipmentPayload::for($this->bookableOrder(), 'EP-CS0W')['shipment'][0]['collection_date']
         );
     }
 
@@ -127,7 +127,7 @@ class ShipmentPayloadTest extends TestCase
     public function the_declared_item_value_is_what_the_customer_actually_paid(): void
     {
         // Sen in the database, a decimal for the customs declaration.
-        $item = ShipmentPayload::for($this->bookableOrder())['shipment'][0]['item'][0];
+        $item = ShipmentPayload::for($this->bookableOrder(), 'EP-CS0W')['shipment'][0]['item'][0];
 
         $this->assertSame(45.5, $item['value']);
         $this->assertSame(2, $item['quantity']);
@@ -137,7 +137,7 @@ class ShipmentPayloadTest extends TestCase
     #[Test]
     public function phone_numbers_are_sent_as_digits_without_the_trunk_zero(): void
     {
-        $parcel = ShipmentPayload::for($this->bookableOrder())['shipment'][0];
+        $parcel = ShipmentPayload::for($this->bookableOrder(), 'EP-CS0W')['shipment'][0];
 
         // "012-345 6789" — the country code carries the prefix instead.
         $this->assertSame('123456789', $parcel['sender']['phone_number']);
@@ -158,15 +158,23 @@ class ShipmentPayloadTest extends TestCase
     }
 
     #[Test]
-    public function a_flat_rate_order_has_no_courier_service_to_book_against(): void
+    public function the_courier_service_comes_from_the_admin_never_from_the_order(): void
     {
+        // orders.courier_service_id holds what the CUSTOMER was quoted. Since
+        // delivery moved to the store's own weight table (REQ-006) that is
+        // 'weight-west' — not an EasyParcel product, and it would be rejected
+        // outright. The admin picks the real service when they book.
         $order = $this->bookableOrder();
-        $order->forceFill(['courier_service_id' => 'flat'])->save();
+        $order->forceFill(['courier_service_id' => 'weight-west'])->save();
+        $order = $order->fresh(['items.variant']);
 
-        $this->assertContains(
-            'A quoted courier service (this order used the flat rate)',
-            ShipmentPayload::missingFor($order->fresh(['items.variant']))
-        );
+        // Not a blocker: readiness is about ADDRESS and PARCEL data.
+        $this->assertSame([], ShipmentPayload::missingFor($order));
+
+        $parcel = ShipmentPayload::for($order, 'EP-CS0W')['shipment'][0];
+
+        $this->assertSame('EP-CS0W', $parcel['service_id']);
+        $this->assertStringNotContainsString('weight-', json_encode($parcel));
     }
 
     #[Test]

@@ -32,6 +32,10 @@ class OrderController extends Controller
                     ->orWhere('customer_name', 'like', "%{$v}%")
             ))
             ->withCount('items')
+            // The row actions ask each order whether it can be booked and
+            // whether it has an AWB, and both read the shipment. Without this
+            // that is one query per row.
+            ->with('shipment')
             ->latest('id')
             ->paginate(20)
             ->withQueryString();
@@ -134,6 +138,34 @@ class OrderController extends Controller
         }
 
         return back()->with('status', $message);
+    }
+
+    /**
+     * The bulk bar's single entry point — REQ-007, REQ-013.
+     *
+     * One POST form for three actions. The alternative, a button carrying
+     * `formmethod="get"`, would put every field in the query string — the CSRF
+     * token included, straight into the access log and the Referer header.
+     *
+     * So: everything arrives by POST, and the two read-only destinations are
+     * reached by redirect. They stay GET, which keeps the booking screen
+     * refreshable and linkable without ever being the thing that charges.
+     */
+    public function bulk(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'bulk_action' => ['required', 'in:process,book,awb'],
+            'order_ids' => ['required', 'array', 'max:200'],
+            'order_ids.*' => ['integer'],
+        ]);
+
+        $ids = array_values(array_unique($data['order_ids']));
+
+        return match ($data['bulk_action']) {
+            'process' => $this->process($request),
+            'book' => redirect()->route('admin.orders.book', ['order_ids' => $ids]),
+            'awb' => redirect()->route('admin.orders.awb', ['order_ids' => $ids]),
+        };
     }
 
     /**

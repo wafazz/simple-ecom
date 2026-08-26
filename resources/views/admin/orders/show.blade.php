@@ -179,6 +179,9 @@
                             @if ($shipment->label_url)
                                 <a href="{{ $shipment->label_url }}" target="_blank" rel="noopener noreferrer"
                                    class="small">Print AWB label</a>
+                            @elseif ($order->hasAwb())
+                                <a href="{{ route('admin.orders.awb', ['order_ids' => [$order->id]]) }}"
+                                   class="small">AWB details</a>
                             @endif
                         </div>
                     @else
@@ -206,16 +209,19 @@
                                 </ul>
                             </div>
                         @else
-                            <form method="POST" action="{{ route('admin.orders.shipment.store', $order) }}"
-                                  class="mt-2">
-                                @csrf
-                                <button type="submit" class="btn btn-shop btn-sm">
-                                    <i class="bi bi-truck me-1"></i>Book shipment
-                                </button>
-                                <div class="form-text">
-                                    This spends your EasyParcel credit immediately and cannot be undone here.
-                                </div>
-                            </form>
+                            {{-- A link to the quote-and-confirm screen, not a
+                                 form that charges. The courier service is chosen
+                                 there: what the customer paid is a weight-table
+                                 figure, not a courier product, so the order
+                                 cannot supply one. --}}
+                            <a href="{{ route('admin.orders.book', ['order_ids' => [$order->id]]) }}"
+                               class="btn btn-shop btn-sm mt-2">
+                                <i class="bi bi-truck me-1"></i>Book courier…
+                            </a>
+                            <div class="form-text">
+                                Shows the courier quotes for this address first. Nothing is
+                                charged until you confirm there.
+                            </div>
                         @endif
                     @endif
                 </div>

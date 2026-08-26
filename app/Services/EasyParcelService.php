@@ -257,6 +257,31 @@ class EasyParcelService
         return [$this->flatQuote()];
     }
 
+    /**
+     * Real courier services only — for the BOOKING screen.
+     *
+     * quote() never comes back empty: it falls back to the flat rate so a
+     * customer always sees a price. That fallback is worse than useless here,
+     * because 'flat' is not a service EasyParcel can book. An empty array is
+     * the honest answer, and the screen says so rather than offering a service
+     * that would be rejected.
+     *
+     * @return array<int, ShippingQuote>
+     */
+    public function courierQuotes(string $postcode, string $state, int $weightG): array
+    {
+        try {
+            return array_values(array_filter(
+                $this->requestQuotations($postcode, $state, $weightG),
+                fn (ShippingQuote $q): bool => ! $q->isFlat(),
+            ));
+        } catch (\Throwable $e) {
+            Log::warning('Courier quotation failed for booking', ['error' => $e->getMessage()]);
+
+            return [];
+        }
+    }
+
     public function flatQuote(): ShippingQuote
     {
         return ShippingQuote::flat(Setting::getInt('flat_shipping_fee_minor', 1000));

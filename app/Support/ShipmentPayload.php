@@ -33,6 +33,12 @@ final class ShipmentPayload
     /**
      * Everything still missing before this order could be booked.
      *
+     * ⚠ The courier service is NOT checked here, deliberately. `orders`
+     * carries what the CUSTOMER was quoted — since delivery moved to the
+     * store's own weight table that is `weight-west` or `weight-east`, which
+     * is not an EasyParcel service and would be rejected by the API. The real
+     * service is picked by the admin when they book, and passed to for().
+     *
      * Checked up front rather than discovered as a rejection from the courier,
      * because by then the request has already been made.
      *
@@ -59,12 +65,6 @@ final class ShipmentPayload
             }
         }
 
-        if (blank($order->courier_service_id) || $order->courier_service_id === 'flat') {
-            // A flat-rate order was never quoted, so there is no courier service
-            // to book against.
-            $missing[] = 'A quoted courier service (this order used the flat rate)';
-        }
-
         if ($order->items->isEmpty()) {
             $missing[] = 'At least one order item';
         }
@@ -80,12 +80,16 @@ final class ShipmentPayload
     /**
      * @return array<string, mixed> the request body
      */
-    public static function for(Order $order): array
+    /**
+     * @param  string  $serviceId  an EasyParcel courier service, chosen by the
+     *                             admin at booking time
+     */
+    public static function for(Order $order, string $serviceId): array
     {
         return [
             'shipment' => [[
                 'reference' => $order->order_no,
-                'service_id' => $order->courier_service_id,
+                'service_id' => $serviceId,
                 'collection_date' => now()
                     ->addDays(Setting::getInt('collection_lead_days', 1))
                     ->format('Y-m-d'),
@@ -175,7 +179,8 @@ final class ShipmentPayload
         return ltrim(preg_replace('/\D+/', '', $phone) ?? '', '0');
     }
 
-    private static function totalWeightG(Order $order): int
+    /** Public: the booking screen quotes each order on this figure. */
+    public static function totalWeightG(Order $order): int
     {
         $total = $order->items->sum(
             fn ($item): int => self::variantWeightG($item->variant) * $item->qty

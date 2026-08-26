@@ -71,6 +71,22 @@ enum OrderStatus: string
         return $this === self::NewOrder;
     }
 
+    /**
+     * May a courier be booked while the order is in this state?
+     *
+     * NewOrder and Processing only. The exclusions matter more than the rule:
+     *  - Cancelled and Returned would post goods that are not going anywhere.
+     *  - NeedsReview means the money arrived but the stock could not be
+     *    allocated — booking would ship what the store does not have.
+     *  - InDelivery and Completed should already HAVE a shipment. One that
+     *    does not is an anomaly to look at, not to fix with a bulk button.
+     *  - Pending is unpaid, and is excluded by the payment check as well.
+     */
+    public function allowsShipmentBooking(): bool
+    {
+        return in_array($this, [self::NewOrder, self::Processing], true);
+    }
+
     public static function selectable(): array
     {
         return array_values(array_filter(

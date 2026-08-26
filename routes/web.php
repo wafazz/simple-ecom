@@ -99,17 +99,32 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
 
         // Orders (REQ-007)
         Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
-        Route::get('/orders/{order:id}', [OrderController::class, 'show'])->name('orders.show');
-        Route::patch('/orders/{order:id}/status', [OrderController::class, 'updateStatus'])->name('orders.status');
+        // ⚠ EVERY literal /orders/<word> route must be registered BEFORE the
+        // {order} wildcard below. Laravel matches in registration order, so a
+        // wildcard declared first swallows "book" as an order id and the page
+        // 404s on a model that does not exist.
 
         // One action for the row button and the bulk bar alike (REQ-007).
         Route::patch('/orders/process', [OrderController::class, 'process'])->name('orders.process');
-        Route::patch('/orders/{order:id}/refund', [OrderController::class, 'markRefunded'])->name('orders.refund');
 
-        // REQ-013 — spends real courier credit. POST only: never a link, so a
-        // prefetch or a crawler can never trigger a charge.
-        Route::post('/orders/{order:id}/shipment', [ShipmentController::class, 'store'])
-            ->name('orders.shipment.store');
+        // The bulk bar posts here and is dispatched to the right action.
+        Route::post('/orders/bulk', [OrderController::class, 'bulk'])->name('orders.bulk');
+
+        // REQ-013 — booking spends real courier credit.
+        //
+        // The GET only QUOTES and shows the confirmation screen; it charges
+        // nothing, so it is safe to link to. The POST is what spends money and
+        // is never reachable by a link, a prefetch or a crawler.
+        Route::get('/orders/book', [ShipmentController::class, 'create'])->name('orders.book');
+        Route::post('/orders/book', [ShipmentController::class, 'store'])->name('orders.book.store');
+
+        // Read-only: lists the AWBs already issued for printing.
+        Route::get('/orders/awb', [ShipmentController::class, 'labels'])->name('orders.awb');
+
+        Route::get('/orders/{order:id}', [OrderController::class, 'show'])->name('orders.show');
+        Route::patch('/orders/{order:id}/status', [OrderController::class, 'updateStatus'])->name('orders.status');
+
+        Route::patch('/orders/{order:id}/refund', [OrderController::class, 'markRefunded'])->name('orders.refund');
 
         // Settings (REQ-011)
         Route::get('/settings', [SettingController::class, 'edit'])->name('settings.edit');

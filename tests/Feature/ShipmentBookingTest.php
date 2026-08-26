@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\OrderStatus;
 use App\Enums\ShipmentStatus;
 use App\Exceptions\ShipmentBookingFailed;
 use App\Exceptions\ShipmentOutcomeUnknown;
@@ -58,7 +59,10 @@ class ShipmentBookingTest extends TestCase
 
     private function bookableOrder(): Order
     {
-        $order = Order::factory()->paid()->create(['courier_service_id' => 'SVC-A']);
+        $order = Order::factory()->paid()->create([
+            'courier_service_id' => 'weight-west',
+            'order_status' => OrderStatus::Processing,
+        ]);
 
         OrderItem::factory()->for($order)->create([
             'product_variant_id' => ProductVariant::factory()->create(['weight_g' => 400])->id,
@@ -86,9 +90,14 @@ class ShipmentBookingTest extends TestCase
         ]]];
     }
 
-    private function book(Order $order): Shipment
+    /**
+     * The courier service is chosen by the admin at booking time, never read
+     * off the order: orders.courier_service_id holds what the CUSTOMER was
+     * quoted, which since REQ-006 is a weight-table id, not a courier product.
+     */
+    private function book(Order $order, string $serviceId = 'EP-CS0W'): Shipment
     {
-        return app(ShipmentBookingService::class)->book($order);
+        return app(ShipmentBookingService::class)->book($order, $serviceId);
     }
 
     #[Test]
@@ -226,15 +235,48 @@ class ShipmentBookingTest extends TestCase
     }
 
     #[Test]
-    public function the_booking_route_is_post_only_and_requires_an_admin(): void
+    public function the_charging_route_is_post_only_and_requires_an_admin(): void
     {
         $order = $this->bookableOrder();
 
-        // A charge must never be reachable by a link, prefetch or crawler.
-        $this->get(route('admin.orders.shipment.store', $order))->assertStatus(405);
+        Http::fake(['*/shipment/quotations' => Http::response(['data' => [['quotations' => [[
+            'courier' => ['service_id' => 'EP-CS0W', 'courier_name' => 'J&T', 'service_name' => 'Standard'],
+            'pricing' => ['total_amount' => '10.84', 'currency' => 'MYR'],
+        ]]]]], 200)]);
 
-        $this->post(route('admin.orders.shipment.store', $order))
-            ->assertRedirect(route('admin.login'));
+        // The confirmation screen shares a path with the charging POST. That is
+        // fine — and worth pinning: opening it quotes and shows prices, and
+        // must charge nothing, so a link, a prefetch or a crawler cannot spend
+        // money by loading it.
+        $this->actingAs(User::factory()->create(['must_change_password' => false]))
+            ->get(route('admin.orders.book', ['order_ids' => [$order->id]]))
+            ->assertOk();
+
+        $this->assertDatabaseCount('shipments', 0);
+
+        // It quotes — that is its whole job — but it must never submit.
+        Http::assertSent(fn ($r): bool => str_contains($r->url(), 'quotations'));
+        Http::assertNotSent(fn ($r): bool => str_contains($r->url(), 'submit_orders'));
+
+    }
+
+    #[Test]
+    public function a_guest_cannot_reach_the_charging_route(): void
+    {
+        // Its own test on purpose: actingAs() persists for the rest of a test
+        // method, so asserting this after an authenticated request would have
+        // been checking an admin, not a guest — and would have passed while
+        // proving nothing.
+        Http::fake();
+        $order = $this->bookableOrder();
+
+        $this->post(route('admin.orders.book.store'), [
+            'service_id' => 'EP-CS0W',
+            'order_ids' => [$order->id],
+        ])->assertRedirect(route('admin.login'));
+
+        $this->assertDatabaseCount('shipments', 0);
+        Http::assertNothingSent();
     }
 
     #[Test]
@@ -245,8 +287,11 @@ class ShipmentBookingTest extends TestCase
         $order = $this->bookableOrder();
 
         $this->actingAs(User::factory()->create(['must_change_password' => false]))
-            ->post(route('admin.orders.shipment.store', $order))
-            ->assertRedirect(route('admin.orders.show', $order))
+            ->post(route('admin.orders.book.store'), [
+                'service_id' => 'EP-CS0W',
+                'order_ids' => [$order->id],
+            ])
+            ->assertRedirect(route('admin.orders.index', ['order_status' => 'processing']))
             ->assertSessionHas('status');
 
         $this->assertSame(ShipmentStatus::Booked, $order->fresh('shipment')->shipment->status);
@@ -260,8 +305,10 @@ class ShipmentBookingTest extends TestCase
         $order = $this->bookableOrder();
 
         $this->actingAs(User::factory()->create(['must_change_password' => false]))
-            ->post(route('admin.orders.shipment.store', $order))
-            ->assertRedirect(route('admin.orders.show', $order))
+            ->post(route('admin.orders.book.store'), [
+                'service_id' => 'EP-CS0W',
+                'order_ids' => [$order->id],
+            ])
             ->assertSessionHas('error', fn (string $m): bool => str_contains($m, 'UNKNOWN'));
     }
 
