@@ -233,13 +233,29 @@ against the ToyyibPay dashboard.
 
 ## 9. Routine operations
 
+> ⛔ **Never run `db:seed` on a live server.** `SettingSeeder` writes with
+> `Setting::put()`, which is an unconditional `updateOrCreate` — it would
+> overwrite the store name, phone, pickup address and delivery rates the owner
+> has set, replacing them with placeholders. New settings do not need seeding:
+> every one has a code-level default and appears in the Settings form ready to
+> save.
+
 ```bash
 # Deploy an update
 git pull
 composer install --no-dev --optimize-autoloader
 php artisan migrate --force
+
+# Ownership drifts on every pull — public/uploads is the one that breaks first.
+sudo mkdir -p public/uploads/products
+sudo chown -R www-data:www-data storage bootstrap/cache public/uploads
+sudo chmod -R 775 storage bootstrap/cache public/uploads
+
 php artisan optimize:clear
 php artisan config:cache && php artisan route:cache && php artisan view:cache
+
+# config:cache does not clear opcache; PHP keeps serving the old bytecode.
+sudo systemctl reload php8.3-fpm
 
 # Before every release
 composer audit
