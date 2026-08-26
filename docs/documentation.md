@@ -52,7 +52,7 @@ Standard Laravel 12 structure (§19). Route → Controller → Form Request → 
 | `app/Http/Controllers/Admin/ProductController.php` | Controller | Product CRUD + deactivate, image upload |
 | `app/Http/Controllers/Admin/VariationController.php` | Controller | Variant CRUD, stock edit |
 | `app/Http/Controllers/Admin/OrderController.php` | Controller | Order list, detail, status update |
-| `app/Http/Controllers/Admin/ShipmentController.php` | Controller | **Book shipment** (POST, admin-only — spends real credit), shipment list, reconciliation screen, label link (REQ-013) |
+| ~~`app/Http/Controllers/Admin/ShipmentController.php`~~ | Controller | ⛔ **NOT BUILT** — blocked on OQ-13. Planned: book shipment (POST, admin-only), shipment list, reconciliation screen, label link (REQ-013) |
 | `app/Http/Controllers/Admin/SettingController.php` | Controller | Store settings; credential **status** only, never values |
 | `app/Http/Controllers/Admin/IntegrationController.php` | Controller | EasyParcel connect / callback / disconnect *(only if the account is on the Open API — OQ-03)* |
 
@@ -79,7 +79,7 @@ Standard Laravel 12 structure (§19). Route → Controller → Form Request → 
 | File | Justification |
 |---|---|
 | `app/Services/ToyyibPayService.php` | External integration. API communication, response normalisation, meaningful exceptions, failure logging. **Fails closed** on any unrecognised response shape |
-| `app/Services/EasyParcelService.php` | External integration. Quotations, **booking (`submit` + `pay`), AWB retrieval, tracking**, OAuth token lifecycle, flat-rate fallback. One service, not split by operation (§22) |
+| `app/Services/EasyParcelService.php` | External integration. **Built:** quotations, OAuth token lifecycle with rotation mutex, flat-rate fallback. ⛔ **Booking (`submit`/`pay`), AWB retrieval and tracking are NOT built** — blocked on OQ-13. One service, not split by operation (§22) |
 | `app/Services/CartService.php` | Session-cart logic genuinely shared between the cart and checkout controllers — not a service-per-model |
 
 **Not built** (§22): `UniversalPaymentProviderFactory`, `UniversalShippingProviderFactory`, `AbstractIntegrationManager`, `IntegrationOrchestrator`, repositories, interfaces over either service.
