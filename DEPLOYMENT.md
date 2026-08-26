@@ -72,6 +72,7 @@ php artisan shop:create-admin                        # prompts, never echoes
 Permissions and caches:
 
 ```bash
+sudo mkdir -p public/uploads/products
 sudo chown -R www-data:www-data storage bootstrap/cache public/uploads
 sudo chmod -R 775 storage bootstrap/cache public/uploads
 
@@ -85,6 +86,14 @@ php artisan view:cache
 
 `php artisan storage:link` is **not** needed: product images are written directly
 into `public/uploads`.
+
+> ⚠ **Re-run the ownership block after every `git pull`.** Pulled files arrive
+> owned by the deploy user, and `public/uploads` is the one that bites: the
+> first image upload has to create `public/uploads/products/`, and if the web
+> server cannot write there the admin gets a validation error saying so. Before
+> that error existed this was a bare 500 page, because a failed `mkdir` raises
+> `UnableToCreateDirectory`, which the disk's `'throw' => false` does **not**
+> cover.
 
 ---
 
