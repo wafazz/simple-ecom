@@ -1,6 +1,6 @@
 # Planning.md — Basic Custom E-Commerce (Laravel 12 / PHP 8.3)
 
-> **Status**: **APPROVED 2026-08-26.** Phases 2–6 complete; Phase 7 (Payment) next.
+> **Status**: **APPROVED 2026-08-26.** Phases 2–7 complete; Phase 8 (Shipping) next.
 > **Last Updated**: 2026-08-26
 > **Spec source**: `Prompt.txt` — *CoreSentinel Development Instruction — Laravel 12 Basic Custom E-Commerce* (36 sections)
 > **Agent**: Iris / CoreSentinel · Init Protocol `05-init-protocol.md`
@@ -975,7 +975,7 @@ The client confirmed **MySQL 8.0**, so `DB_CONNECTION=mysql` is correct. Recorde
 | 4 | **Core Laravel MVC** — routes, controllers, Blade layouts/views, validation, middleware | ✅ **Done** — commit `448979a`. 76 tests green on SQLite + MariaDB. Admin auth, order lookup, Money support, Bootstrap vendored |
 | 5 | **Product** — categories, products, variations, stock (REQ-001/002/008) | ✅ **Done** — commit `4c31125`. Admin CRUD + storefront catalogue. 101 tests green on SQLite + MariaDB |
 | 6 | **Cart & Checkout** — session cart, product + variation selection, customer details, shipping address, order creation (REQ-003/004) | ✅ **Done** — commit `735219d`. 124 tests green on SQLite + MariaDB. Live E2E order created |
-| 7 | **Payment** — verified ToyyibPay integration (REQ-005) | `Planned` — **gated on §11.A.6**; fails closed by design |
+| 7 | **Payment** — verified ToyyibPay integration (REQ-005) | ✅ **Built** — commit `5c42880`. 139 tests green on SQLite + MariaDB. **Fails closed: cannot settle a real payment until OQ-11 is answered** |
 | 8a | **Shipping — rates** — verified EasyParcel quotations (REQ-006) | `Planned` — needs OQ-03 answered first |
 | 8b | **Shipping — booking, AWB & tracking** (REQ-013) — `shipments` table, admin booking action, reconciliation screen, tracking | `Planned` — **blocked until the payloads in §11.B.5.1 are read and recorded**. Sandbox-only until then |
 | 9 | **Admin** — dashboard, catalogue, orders, settings (REQ-007/009/011) | `Planned` |

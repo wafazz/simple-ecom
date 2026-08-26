@@ -1,12 +1,12 @@
 # Session Memory - Basic Custom E-Commerce
-> Last updated: 2026-08-27 02:15
+> Last updated: 2026-08-27 03:00
 
 ## Session Context
 - **Project**: Basic Custom E-Commerce
 - **Profile**: `~/Desktop/CS/Projects/06-basic-ecom.md`
-- **Branch**: master — Ph2 `43035bf`, Ph3 `23bb05a`, Ph4 `448979a`, Ph5 `4c31125`, Ph6 `735219d`
+- **Branch**: master — Ph2 `43035bf`, Ph3 `23bb05a`, Ph4 `448979a`, Ph5 `4c31125`, Ph6 `735219d`, Ph7 `5c42880`
 - **Status**: active — Planning.md APPROVED 2026-08-26. Phase 2 complete, Phase 3 next.
-- **Focus**: Phase 7 — ToyyibPay payment (spec §27). **Gated on OQ-11.**
+- **Focus**: Phase 8 — EasyParcel rates (8a) then booking/AWB/tracking (8b). **8b blocked on OQ-13.**
 
 ## Current Tasks
 - [x] Phase 0 Intake — name, work mode, deploy target, database
@@ -19,7 +19,9 @@
 - [x] **Phase 4 — Core Laravel MVC**: routes, middleware, controllers, Form Requests, Blade layouts + components, error views, Money support
 - [x] **Phase 5 — Product**: admin CRUD for categories/products/variations + stock, storefront catalogue + detail
 - [x] **Phase 6 — Cart & Checkout**: CartService, cart screens, CheckoutRequest, order creation + confirmation
-- [ ] **Phase 7 — Payment**: ToyyibPayService, createBill, redirect, return + callback, server-side verification. **BLOCKED on OQ-11**
+- [x] **Phase 7 — Payment**: ToyyibPayService (fail-closed), PaymentController, settlement transaction. **Built; cannot settle live until OQ-11**
+- [ ] **Phase 8a — Shipping rates**: EasyParcelService quotations, OAuth, checkout rate selection
+- [ ] **Phase 8b — Booking/AWB/tracking** (REQ-013). **BLOCKED on OQ-13**
 - [ ] **OQ-13 blocks Phase 8b** — read `shipment/submit` + `shipment/pay` payloads from `github.com/easyparcel/OpenAPI` and record them. Booking code cannot be written first (§3)
 - [ ] **OQ-03 first** — is EasyParcel on the Open API (OAuth) or legacy Connect (flat key)? Changes Phase 8 design + table count
 - [ ] Verify ToyyibPay `getBillTransactions` field names against the official reference (human, browser)
@@ -94,6 +96,11 @@
 - Scout verified: **Laravel 12 left bug-fix support 2026-08-13**; Laravel 13 is current; local PHP is 8.4.10 so `config.platform.php = "8.3"` is load-bearing; Composer 2.8.10 present; Bootstrap 5.3.8 current.
 - Applied 5 patterns from `11-pattern-library.md`: atomic race-free guard, integer minor units, variants-without-EAV, soft-deletes/unique-index, encrypted secrets at rest.
 
+### Phase 7 note — the fail-closed contract
+- `ToyyibPayService::verifyPayment()` returns `unverified` for any shape it cannot positively recognise, and the order **stays pending**. If someone later reports "payments don't settle", check OQ-11 BEFORE treating it as a bug — this is deliberate.
+- Amount unit is also unconfirmed: `TOYYIBPAY_AMOUNT_FORMAT` (`decimal`|`cents`). A wrong value causes a MISMATCH refusal, never a silent wrong charge. The mismatch log prints both interpretations so the right setting is obvious.
+- Correction made: the `ToyyibPayService` container binding silently no-op'd because Pint rewrote the FQCN to the imported short form between my edits. Python `str.replace()` fails silently — assert on the anchor.
+
 ### Phase 6 corrections
 - Order numbers first used `random_int(1,9999)` — ~50% collision by ~120 orders/day — and the docblock claimed a retry the code never implemented. Now sequential within the day, with the UNIQUE key as the guard and a real retry loop.
 - `CartController::store()` read `qtyFor()` **after** `add()` when deciding whether the quantity was capped, so it always claimed "capped". Now captures the before-value.
@@ -122,7 +129,10 @@
 - **Live E2E passed**: add 2× T-Shirt M/Black → cart → checkout → `ORD-20260826-0001` created `pending_payment/pending`, 6000+1000=7000, snapshot correct, **stock still 20 (correctly not decremented)**.
 - Working now: session cart (prices always re-read from DB), quantity clamping, checkout with ISO 3166-2:MY state select, server-side totals, order + snapshot, confirmation page.
 - Shipping is the **flat rate from settings** until Phase 8 wires EasyParcel quotations. `orders.shipping_rate_source` is set to `'flat'`.
-- Next: **Phase 7 — Payment.** ToyyibPayService (`createBill`, `getBillTransactions`), redirect, return + callback handlers, server-side verification, guarded paid transition + atomic stock decrement in one transaction. **The service must fail closed and OQ-11 blocks settling a real payment.**
+- **139 tests / 343 assertions green on SQLite AND MariaDB 10.4.28**, 15 payment-specific, all `Http::fake()` — no live calls.
+- **Live: a forged callback returned 200 but settled nothing** — order stayed pending, stock untouched.
+- Proven by test: verified payment settles + decrements once · duplicate callback decrements exactly once · forged callback ignored · amount mismatch refuses · reference mismatch refuses · unrecognised shape leaves pending · HTML error page leaves pending · gateway outage leaves pending · oversell → `needs_review` · unknown bill code answered 200.
+- Next: **Phase 8a — EasyParcel rates.** OAuth (authorize/token/refresh with `Cache::lock` mutex), encrypted `integration_tokens`, `shipment/quotations`, checkout courier selection, flat-rate fallback. Then **8b booking** once OQ-13 is answered.
 
 ### Key Context for Next Session
 - **The payment path fails closed on purpose.** If payments don't settle in testing, check `Planning.md` §11.A.6 before assuming a bug.
