@@ -78,6 +78,58 @@ class MoneyTest extends TestCase
     }
 
     #[Test]
+    #[DataProvider('groupedCases')]
+    public function it_groups_large_amounts_without_floats(int $minor, string $expected): void
+    {
+        $this->assertSame($expected, Money::displayGrouped($minor));
+    }
+
+    public static function groupedCases(): array
+    {
+        return [
+            'zero' => [0, 'RM 0.00'],
+            'small' => [3000, 'RM 30.00'],
+            'thousands' => [2445109, 'RM 24,451.09'],
+            'millions' => [210784794, 'RM 2,107,847.94'],
+            'negative' => [-125050, '-RM 1,250.50'],
+        ];
+    }
+
+    #[Test]
+    #[DataProvider('wholeCases')]
+    public function it_rounds_headline_figures_to_the_ringgit(int $minor, string $expected): void
+    {
+        $this->assertSame($expected, Money::displayWhole($minor));
+    }
+
+    public static function wholeCases(): array
+    {
+        return [
+            'rounds down' => [210784749, 'RM 2,107,847'],
+            'rounds up' => [210784794, 'RM 2,107,848'],
+            'half rounds up' => [150, 'RM 2'],
+            'zero' => [0, 'RM 0'],
+        ];
+    }
+
+    #[Test]
+    public function percent_change_is_null_when_there_is_no_baseline(): void
+    {
+        // "Up from zero" is not a percentage. Rendering one would be a
+        // fabricated figure on a business dashboard.
+        $this->assertNull(Money::percentChange(0, 5000));
+        $this->assertNull(Money::percentChange(0, 0));
+    }
+
+    #[Test]
+    public function percent_change_reports_direction_and_magnitude(): void
+    {
+        $this->assertSame(-100.0, Money::percentChange(5000, 0));
+        $this->assertSame(100.0, Money::percentChange(5000, 10000));
+        $this->assertEqualsWithDelta(-41.7, Money::percentChange(41938, 24451), 0.1);
+    }
+
+    #[Test]
     public function it_rejects_a_negative_quantity(): void
     {
         $this->expectException(InvalidArgumentException::class);

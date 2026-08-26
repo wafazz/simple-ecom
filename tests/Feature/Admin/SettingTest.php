@@ -33,6 +33,7 @@ class SettingTest extends TestCase
             'default_weight_g' => 600,
             'flat_shipping_fee' => '12.50',
             'low_stock_threshold' => 3,
+            'ads_cost' => '0',
         ], $overrides);
     }
 
@@ -79,6 +80,16 @@ class SettingTest extends TestCase
         $this->actingAs($this->admin)->put(route('admin.settings.update'), $this->payload());
 
         $this->assertSame('Kedai Contoh', Setting::get('store_name'));
+    }
+
+    #[Test]
+    public function ads_cost_is_entered_in_ringgit_and_stored_as_sen(): void
+    {
+        $this->actingAs($this->admin)
+            ->put(route('admin.settings.update'), $this->payload(['ads_cost' => '631148.00']));
+
+        $this->assertSame(63114800, Setting::getInt('ads_cost_minor'));
+        $this->assertNull(Setting::cached()['ads_cost'] ?? null);
     }
 
     #[Test]

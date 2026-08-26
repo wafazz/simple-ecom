@@ -97,6 +97,27 @@
                     </div>
                 </div>
 
+                <div class="card mb-3">
+                    <div class="card-header">Marketing</div>
+                    <div class="card-body row g-3">
+                        <div class="col-12">
+                            <p class="text-muted small mb-0">
+                                Advertising spend is not part of the order data, so the dashboard cannot
+                                derive it. Enter your total ad spend here and the dashboard will show
+                                Ads Cost and calculate ROAS. Leave it at 0 and both read
+                                <em>Not tracked</em> rather than a misleading zero.
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="ads_cost" class="form-label">Total ads cost ({{ config('shop.currency_symbol') }})</label>
+                            <input type="text" inputmode="decimal" name="ads_cost" id="ads_cost" required
+                                   value="{{ old('ads_cost', \App\Support\Money::format((int) ($settings['ads_cost_minor'] ?? 0))) }}"
+                                   class="form-control @error('ads_cost') is-invalid @enderror">
+                            @error('ads_cost') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                        </div>
+                    </div>
+                </div>
+
                 <button type="submit" class="btn btn-shop">Save settings</button>
             </form>
         </div>

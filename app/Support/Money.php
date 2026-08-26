@@ -56,6 +56,42 @@ final class Money
         return $negative ? -$minor : $minor;
     }
 
+    /** Sen -> "2,107,847.94". Grouped for dashboard figures. Display only. */
+    public static function displayGrouped(int $minor, string $currency = 'RM'): string
+    {
+        $sign = $minor < 0 ? '-' : '';
+        $abs = abs($minor);
+
+        // number_format on the INTEGER ringgit part — the fractional part is
+        // padded separately, so no float is ever constructed.
+        return $sign.$currency.' '.number_format(intdiv($abs, 100))
+            .'.'.str_pad((string) ($abs % 100), 2, '0', STR_PAD_LEFT);
+    }
+
+    /** Sen -> "RM 2,107,848". Rounded to the ringgit, for headline tiles. */
+    public static function displayWhole(int $minor, string $currency = 'RM'): string
+    {
+        $sign = $minor < 0 ? '-' : '';
+
+        return $sign.$currency.' '.number_format(intdiv(abs($minor) + 50, 100));
+    }
+
+    /**
+     * Percentage change between two amounts, as a float for display only.
+     *
+     * Returns null when there is no baseline to compare against — "up from
+     * zero" is not a percentage, and rendering one would be a fabricated
+     * number on a business dashboard.
+     */
+    public static function percentChange(int $previousMinor, int $currentMinor): ?float
+    {
+        if ($previousMinor === 0) {
+            return null;
+        }
+
+        return (($currentMinor - $previousMinor) / $previousMinor) * 100;
+    }
+
     /** Line total. Kept here so no controller ever writes `$price * $qty` inline. */
     public static function lineTotal(int $unitMinor, int $qty): int
     {
