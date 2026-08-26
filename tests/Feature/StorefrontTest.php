@@ -62,6 +62,14 @@ class StorefrontTest extends TestCase
     }
 
     #[Test]
+    public function the_storefront_loads_bootstrap_js_so_the_mobile_menu_works(): void
+    {
+        // The navbar toggler is data-bs-toggle driven; without the bundle it is
+        // an inert button and the menu is unreachable on a phone.
+        $this->get(route('home'))->assertOk()->assertSee('js/bootstrap.bundle.min.js', false);
+    }
+
+    #[Test]
     public function every_response_carries_a_correlation_id(): void
     {
         $this->get(route('home'))->assertOk()->assertHeader('X-Request-Id');

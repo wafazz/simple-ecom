@@ -49,6 +49,9 @@
     </div>
 </footer>
 
+{{-- The navbar toggler uses data-bs-toggle, which needs Bootstrap's JS.
+     Without this the mobile menu silently does nothing. --}}
+<script src="{{ asset('js/bootstrap.bundle.min.js') }}"></script>
 <script src="{{ asset('js/app.js') }}"></script>
 @stack('scripts')
 </body>

@@ -5,58 +5,139 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Admin') — {{ $storeName }}</title>
-    <link rel="stylesheet" href="{{ asset('css/bootstrap.min.css') }}">
+
+    {{-- All vendored locally. No CDN at runtime, no build step (spec §6). --}}
+    <link rel="stylesheet" href="{{ asset('vendor/bootstrap-icons/bootstrap-icons.css') }}">
+    <link rel="stylesheet" href="{{ asset('vendor/adminlte/adminlte.min.css') }}">
     <link rel="stylesheet" href="{{ asset('css/app.css') }}">
 </head>
-<body class="bg-body-tertiary">
-<div class="container-fluid">
-    <div class="row">
-        <aside class="col-12 col-md-3 col-lg-2 admin-sidebar p-3">
-            <a href="{{ route('admin.dashboard') }}" class="navbar-brand text-white d-block mb-3">
-                {{ $storeName }}
-            </a>
-            <ul class="nav nav-pills flex-column gap-1">
+<body class="layout-fixed sidebar-expand-lg bg-body-tertiary">
+<div class="app-wrapper">
+
+    <nav class="app-header navbar navbar-expand bg-body">
+        <div class="container-fluid">
+            <ul class="navbar-nav">
                 <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}"
-                       href="{{ route('admin.dashboard') }}">Dashboard</a>
+                    <a class="nav-link" data-lte-toggle="sidebar" href="#" role="button" aria-label="Toggle navigation">
+                        <i class="bi bi-list"></i>
+                    </a>
                 </li>
-                <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('admin.categories.*') ? 'active' : '' }}"
-                       href="{{ route('admin.categories.index') }}">Categories</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('admin.products.*') ? 'active' : '' }}"
-                       href="{{ route('admin.products.index') }}">Products</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('admin.orders.*') ? 'active' : '' }}"
-                       href="{{ route('admin.orders.index') }}">Orders</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('admin.integrations.*') ? 'active' : '' }}"
-                       href="{{ route('admin.integrations.index') }}">Integrations</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('admin.settings.*') ? 'active' : '' }}"
-                       href="{{ route('admin.settings.edit') }}">Settings</a>
+                <li class="nav-item d-none d-md-block">
+                    <a href="{{ route('home') }}" class="nav-link" target="_blank" rel="noopener">
+                        <i class="bi bi-box-arrow-up-right me-1"></i> View store
+                    </a>
                 </li>
             </ul>
-            <form method="POST" action="{{ route('admin.logout') }}" class="mt-4">
-                @csrf
-                <button type="submit" class="btn btn-sm btn-outline-light w-100">Log out</button>
-            </form>
-        </aside>
 
-        <main class="col-12 col-md-9 col-lg-10 py-4">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h1 class="h4 mb-0">@yield('heading', 'Admin')</h1>
-                <span class="text-muted small">{{ auth()->user()?->name }}</span>
+            <ul class="navbar-nav ms-auto">
+                @if ($needsReviewCount ?? 0)
+                    {{-- Paid orders whose stock could not be allocated. Surfaced
+                         everywhere, not just on the order list. --}}
+                    <li class="nav-item">
+                        <a href="{{ route('admin.orders.index', ['order_status' => 'needs_review']) }}"
+                           class="nav-link position-relative" title="Orders needing review">
+                            <i class="bi bi-exclamation-triangle"></i>
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill text-bg-warning">
+                                {{ $needsReviewCount }}
+                            </span>
+                        </a>
+                    </li>
+                @endif
+                <li class="nav-item dropdown">
+                    <a class="nav-link" data-bs-toggle="dropdown" href="#" role="button" aria-expanded="false">
+                        <i class="bi bi-person-circle me-1"></i>
+                        <span class="d-none d-sm-inline">{{ auth()->user()?->name }}</span>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li>
+                            <a class="dropdown-item" href="{{ route('admin.password.edit') }}">
+                                <i class="bi bi-key me-2"></i> Change password
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <form method="POST" action="{{ route('admin.logout') }}">
+                                @csrf
+                                <button type="submit" class="dropdown-item">
+                                    <i class="bi bi-box-arrow-right me-2"></i> Log out
+                                </button>
+                            </form>
+                        </li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <aside class="app-sidebar bg-body-secondary shadow" data-bs-theme="dark">
+        <div class="sidebar-brand">
+            <a href="{{ route('admin.dashboard') }}" class="brand-link">
+                <i class="bi bi-shop brand-image opacity-75 ms-3 me-2"></i>
+                <span class="brand-text fw-light">{{ $storeName }}</span>
+            </a>
+        </div>
+
+        <div class="sidebar-wrapper">
+            <nav class="mt-2">
+                <ul class="nav sidebar-menu flex-column" data-lte-toggle="treeview" role="navigation">
+                    @php
+                        $nav = [
+                            ['admin.dashboard',        'admin.dashboard',    'bi-speedometer2', 'Dashboard'],
+                            ['admin.orders.index',     'admin.orders.*',     'bi-receipt',      'Orders'],
+                            ['admin.products.index',   'admin.products.*',   'bi-box-seam',     'Products'],
+                            ['admin.categories.index', 'admin.categories.*', 'bi-tags',         'Categories'],
+                            ['admin.integrations.index','admin.integrations.*','bi-plug',       'Integrations'],
+                            ['admin.settings.edit',    'admin.settings.*',   'bi-gear',         'Settings'],
+                        ];
+                    @endphp
+
+                    @foreach ($nav as [$route, $pattern, $icon, $label])
+                        <li class="nav-item">
+                            <a href="{{ route($route) }}"
+                               class="nav-link {{ request()->routeIs($pattern) ? 'active' : '' }}">
+                                <i class="nav-icon bi {{ $icon }}"></i>
+                                <p>{{ $label }}</p>
+                            </a>
+                        </li>
+                    @endforeach
+                </ul>
+            </nav>
+        </div>
+    </aside>
+
+    <main class="app-main">
+        <div class="app-content-header">
+            <div class="container-fluid">
+                <div class="row align-items-center">
+                    <div class="col-sm-6">
+                        <h1 class="h4 mb-0">@yield('heading', 'Admin')</h1>
+                    </div>
+                    <div class="col-sm-6">
+                        <ol class="breadcrumb float-sm-end mb-0">
+                            <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Admin</a></li>
+                            <li class="breadcrumb-item active" aria-current="page">@yield('title', 'Admin')</li>
+                        </ol>
+                    </div>
+                </div>
             </div>
-            <x-alerts />
-            @yield('content')
-        </main>
-    </div>
+        </div>
+
+        <div class="app-content">
+            <div class="container-fluid">
+                <x-alerts />
+                @yield('content')
+            </div>
+        </div>
+    </main>
+
+    <footer class="app-footer">
+        <div class="float-end d-none d-sm-inline">{{ config('app.name') }}</div>
+        <strong>{{ $storeName }}</strong> — admin
+    </footer>
 </div>
+
+<script src="{{ asset('js/bootstrap.bundle.min.js') }}"></script>
+<script src="{{ asset('vendor/adminlte/adminlte.min.js') }}"></script>
 <script src="{{ asset('js/app.js') }}"></script>
 @stack('scripts')
 </body>

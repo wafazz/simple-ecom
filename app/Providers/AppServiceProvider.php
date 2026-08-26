@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Enums\OrderStatus;
+use App\Models\Order;
 use App\Models\Setting;
 use App\Services\CartService;
 use App\Services\EasyParcelService;
@@ -49,6 +51,18 @@ class AppServiceProvider extends ServiceProvider
         // in their own sections. Registering on 'layouts.*' alone left child
         // views with an undefined $storeName. Settings are cached, so this is
         // not a query per view.
+        // Admin-only, so the storefront never pays for this query. One
+        // indexed count; paid orders that could not be stocked must be visible
+        // from every admin screen, not just the order list (Planning §7.5).
+        // Registered for the admin views too, not just the layout: a child
+        // view that renders the variable in its own section receives nothing
+        // from a layout-only composer. (Repeat of a Phase 4 defect.)
+        View::composer(['layouts.admin', 'admin.*'], function ($view): void {
+            $view->with('needsReviewCount', Order::query()
+                ->where('order_status', OrderStatus::NeedsReview->value)
+                ->count());
+        });
+
         View::composer(['layouts.*', 'storefront.*', 'admin.*'], function ($view): void {
             $view->with([
                 'storeName' => Setting::get('store_name'),

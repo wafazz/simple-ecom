@@ -184,6 +184,7 @@ A single-vendor **Basic Custom E-Commerce Website** for a small business, on **L
 | Config | Laravel config + `.env` | §5, §31 |
 | Templating | **Blade**, auto-escaping | §6 |
 | Frontend | HTML5, CSS3, **Bootstrap 5.3**, vanilla JS where necessary | §6 |
+| Admin template | **AdminLTE 4.9.1** — vendored locally, no CDN, no build step (Planning §12.3) | §6 |
 | HTTP client | `Http` facade (Guzzle, ships with Laravel) — `timeout()`, `retry()`, `Http::fake()` | §22 |
 | Testing | Laravel testing (**PHPUnit ^11.5**, Laravel 12 default) | §32 |
 | Tooling | Composer; Laravel Pint | §5, §30 |

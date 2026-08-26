@@ -1,6 +1,7 @@
 /* Basic Custom E-Commerce — Planning §12.2.
-   Loaded AFTER bootstrap.min.css. Holds only what Bootstrap does not:
-   store identity and a few commerce-specific bits. No build step. */
+   Storefront: loaded after bootstrap.min.css.
+   Admin: loaded after adminlte.min.css, which brings its own Bootstrap.
+   Holds only what neither provides. No build step. */
 
 :root {
     --shop-accent: #0f766e;
@@ -60,26 +61,6 @@ th.money {
     object-fit: cover;
     width: 100%;
     background: #f1f3f5;
-}
-
-.admin-sidebar {
-    min-height: 100%;
-    background: #1c1f23;
-}
-
-.admin-sidebar .nav-link {
-    color: #cbd2d9;
-    border-radius: .35rem;
-}
-
-.admin-sidebar .nav-link:hover {
-    background: rgba(255, 255, 255, .06);
-    color: #fff;
-}
-
-.admin-sidebar .nav-link.active {
-    background: var(--shop-accent);
-    color: #fff;
 }
 
 footer.shop-footer {
