@@ -117,7 +117,8 @@
                     <span class="badge text-bg-{{ $connected ? 'success' : 'warning' }}">
                         {{ $connected ? 'Connected' : 'Not connected' }}
                     </span>
-                    <x-integration-mode provider="easyparcel" :mode="$modes['easyparcel']" />
+                    {{-- No toggle: EasyParcel decides the environment from the
+                         account authorised during OAuth, not from anything we send. --}}
                 </span>
             </div>
 
@@ -173,6 +174,12 @@
                         <button class="btn btn-outline-danger btn-sm">Disconnect</button>
                     </form>
                 @else
+                    <div class="alert alert-info py-2 small">
+                        <strong>Sandbox or live is decided by the account you authorise.</strong>
+                        EasyParcel uses one host and one client ID for both — authorising with a
+                        sandbox account puts every request in sandbox, a live account puts them
+                        live. To switch, disconnect and authorise again with the other account.
+                    </div>
                     <p class="text-muted small">Authorise once; the connection then renews itself.</p>
                     <form method="POST" action="{{ route('admin.integrations.connect') }}">
                         @csrf

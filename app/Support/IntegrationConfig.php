@@ -34,6 +34,17 @@ final class IntegrationConfig
     /** Providers that have their own credential form. */
     public const PROVIDERS = ['toyyibpay', 'easyparcel'];
 
+    /**
+     * Providers where WE choose the environment.
+     *
+     * ToyyibPay selects it by hostname (toyyibpay.com vs dev.toyyibpay.com), so
+     * a toggle is meaningful. EasyParcel does NOT: its official reference states
+     * the environment "is determined by the EasyParcel account that the user
+     * logs in with during authorization" — same host, same client ID. A toggle
+     * there would imply control this application does not have.
+     */
+    public const MODE_SELECTABLE = ['toyyibpay'];
+
     private function __construct() {}
 
     /**
@@ -75,8 +86,8 @@ final class IntegrationConfig
 
     public static function setMode(string $provider, string $mode): void
     {
-        if (! in_array($provider, self::PROVIDERS, true)) {
-            throw new \InvalidArgumentException("Unknown provider: {$provider}");
+        if (! in_array($provider, self::MODE_SELECTABLE, true)) {
+            throw new \InvalidArgumentException("Environment is not selectable for: {$provider}");
         }
 
         if (! in_array($mode, ['sandbox', 'production'], true)) {

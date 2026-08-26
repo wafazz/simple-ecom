@@ -723,24 +723,74 @@ booking **spends real money** from the store's EasyParcel credit balance. Every 
 failure in this system costs a page reload. A failure here can cost a paid courier
 booking with no record of it, or a customer charged for shipping that was never booked.
 
-##### 11.B.5.1 `NEEDS VERIFICATION` — the payloads (§3)
+##### 11.B.5.1 ✅ VERIFIED against the official specification — 2026-08-27
 
-The Open API index names the booking endpoints, but this session **did not read and confirm
-their request/response bodies** the way §11.B.1 did for quotations. Per §3, they are not
-invented here:
+**OQ-13 is CLOSED.** `github.com/easyparcel/OpenAPI` was read directly at
+`source/includes/2026-06/`. Three things I had guessed were wrong.
 
-| Item | Status |
+**The booking endpoint is ONE call, not two:**
+
+`POST https://api.easyparcel.com/open_api/2026-06/shipment/submit_orders`
+
+There is no separate `shipment/submit` then `shipment/pay`. The response carries
+`pricing_breakdown.total_paid_amount`, so submitting **is** paying. That removes
+the two-phase failure window §11.B.5.3 was designed around — a real
+simplification, and a safer one.
+
+**Request** — `shipment[]` with `reference`, `service_id`, `collection_date`,
+`weight`, `height`/`length`/`width`, an `item[]` array (content, weight, dims,
+`currency_code`, `value`, `quantity`), and full `sender`/`receiver` objects
+(`name`, `company`, `phone_number_country_code`, `phone_number`, `email`,
+`address_1`, `address_2`, `postcode`, `city`, `subdivision_code`,
+`country_code`), plus optional `feature` (sms/email/whatsapp tracking, AWB
+branding, COD) and `coupon_codes`.
+
+**Response** — `order_details.order_number` (`EI-…`), and per shipment:
+`shipment_number` (`ES-…`), `courier`, `awb_number`, `awb_url`,
+`awb_urls_by_format` (A4/A5/A6), `tracking_url`, and a `pricing_breakdown`.
+
+⚠ **`awb_number` and `tracking_url` are `null` in the submit response.** They are
+assigned afterwards, so booking cannot capture them synchronously — retrieving
+them needs a follow-up call (`_shipmentdetail.md`) or the documented webhooks.
+The §11.B.5.6 design assumed they arrive with the booking. They do not.
+
+**Data this system does not yet collect** — REQ-013 needs more than a weight:
+
+| Needed | Status here |
 |---|---|
-| `POST …/shipment/submit` — endpoint exists | *named in the spec index* |
-| `POST …/shipment/pay` — endpoint exists | *named in the spec index* |
-| Tracking retrieval endpoint + polling vs webhook | **`NEEDS VERIFICATION`** |
-| Exact `submit` request body (parcel dimensions? pickup date? sender contact fields?) | **`NEEDS VERIFICATION`** |
-| Exact `submit`/`pay` response shape — where the **AWB number**, tracking number, tracking URL and label PDF URL appear | **`NEEDS VERIFICATION`** |
-| Whether `submit` and `pay` are separate calls or can be combined | **`NEEDS VERIFICATION`** |
-| Whether the API exposes the **credit balance**, so low balance can be warned on before booking | **`NEEDS VERIFICATION`** |
-| Idempotency: does EasyParcel accept a client-supplied idempotency key on `submit`/`pay`? | **`NEEDS VERIFICATION`** — this materially changes §11.B.5.3 |
+| Sender name, company, phone, email, address_1/2, city | **Missing.** Settings holds only pickup postcode + state |
+| `phone_number_country_code` for both parties | **Missing** |
+| Parcel `height`/`length`/`width` | **Missing.** Variants carry `weight_g` only |
+| Per-item dimensions and declared `value` | **Missing** |
+| `collection_date` | **Missing** — needs a pickup date, cf. OQ-16 |
 
-**Phase 8b cannot start until these are read from `github.com/easyparcel/OpenAPI` and recorded here.** The rest of this section is the *control design*, which holds regardless of field names.
+So REQ-013 is no longer blocked on documentation, but it is blocked on **data**:
+store sender details and a default parcel size have to exist before a booking can
+be assembled.
+
+**Confirmed as already built correctly:** quotation endpoint and request shape,
+`subdivision_code` as ISO 3166, **`weight` in KG** (`double(8,2)`, "Parcel weight
+in KG" — the `EASYPARCEL_WEIGHT_UNIT=kg` default was right, closing that part of
+OQ-13), `total_amount` as a decimal string, `oauth/login` and `oauth/token`,
+`grant_type` values, `expires_in: 36000` (10 h) and
+`refresh_token_expires_in: 31557600` (~1 y).
+
+##### 11.B.5.1a Environment — corrected 2026-08-27
+
+The sandbox is **not a different host**, and I had built a toggle implying it
+might be. The specification is explicit:
+
+> "Unlike many APIs where the environment is selected by using different
+> endpoints, API keys, or applications, the EasyParcel Open API determines the
+> environment based on the **EasyParcel account** that the user authorizes
+> during the OAuth flow."
+
+One host, one client ID, for both. The environment follows whichever account the
+admin logs in with during authorisation. The EasyParcel toggle has therefore been
+**removed** — `IntegrationConfig::MODE_SELECTABLE` is `['toyyibpay']` only — and
+the screen explains that switching means disconnecting and re-authorising with
+the other account. A control that appears to switch environments but does not is
+worse than none.
 
 ##### 11.B.5.2 Booking is admin-triggered, not automatic
 
@@ -1193,7 +1243,7 @@ The client confirmed **MySQL 8.0**, so `DB_CONNECTION=mysql` is correct. Recorde
 | **OQ-10** | Confirm the **asset-pipeline decision** in Planning §5.2 — remove Vite (recommended, no Node) or keep the stock skeleton per §19's folder list. | Build + deploy shape |
 | ~~**OQ-11**~~ | ✅ **CLOSED 2026-08-27.** The official reference was read directly (403 to the fetcher, 200 to a browser User-Agent). All field names confirmed, the amount format confirmed as decimal ringgit, and two defects fixed — see §11.A.6 and §11.A.7. **Live payments are no longer blocked.** | — |
 | **OQ-12** | **REQ-013: who funds and monitors the EasyParcel credit balance?** Booking debits a prepaid balance. If it runs dry, booking fails for every order until someone tops it up — and top-up is a manual dashboard action, deliberately not built into the app (Planning §11.B.5.7). Who watches it, and should the app warn at a threshold? | **Booking stops working when the balance empties.** Operational, recurring, and outside the RM1,000 build |
-| **OQ-13** | **REQ-013: the booking payloads are unverified** (Planning §11.B.5.1) — `submit`/`pay` request and response shapes, where the AWB appears, tracking mechanism, and whether an idempotency key is supported. A human must read `github.com/easyparcel/OpenAPI` and record them. | **Blocks Phase 8b entirely** |
+| ~~**OQ-13**~~ | ✅ **CLOSED 2026-08-27.** Specification read directly. One endpoint (`shipment/submit_orders`), not two; `weight` is in KG as built; `awb_number`/`tracking_url` arrive **later**, not with the booking. REQ-013 is no longer blocked on documentation — it is blocked on **data** the system does not collect (sender details, parcel dimensions, collection date). See §11.B.5.1. | Blocks Phase 8b on data, not docs |
 | **OQ-14** | **REQ-013: booking trigger.** Planned as an **admin action**, deliberately kept out of the payment callback (Planning §11.B.5.2). Confirm — or state that booking must happen automatically on payment, which is a materially riskier design and needs its own retry/idempotency work. | Design of the booking path |
 | **OQ-15** | **REQ-013: label handling.** Store EasyParcel's label URL and open it on demand (planned), or download and re-host the PDF? Re-hosting adds storage, auth and cleanup. Depends on whether the URL expires. | Storage + Phase 8b effort |
 | **OQ-16** | **REQ-013: pickup.** Does booking need a pickup date / address distinct from the store's `settings` origin, and does the courier require a scheduled pickup slot? | May add fields to the booking form |

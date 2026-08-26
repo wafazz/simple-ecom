@@ -116,8 +116,9 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
         Route::delete('/integrations/credentials/{key}', [IntegrationController::class, 'clearCredential'])
             ->where('key', '[a-z_.]+')->name('integrations.credentials.clear');
 
+        // Only providers whose environment WE select — see MODE_SELECTABLE.
         Route::patch('/integrations/{provider}/mode', [IntegrationController::class, 'setMode'])
-            ->whereIn('provider', IntegrationConfig::PROVIDERS)
+            ->whereIn('provider', IntegrationConfig::MODE_SELECTABLE)
             ->name('integrations.mode');
 
         // Throttled: each call is a real outbound request to a third party.

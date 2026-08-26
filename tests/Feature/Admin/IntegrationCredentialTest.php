@@ -209,8 +209,30 @@ class IntegrationCredentialTest extends TestCase
         $this->assertSame('production', IntegrationConfig::mode('toyyibpay'));
         $this->assertFalse(IntegrationConfig::isSandbox('toyyibpay'));
 
-        // The other provider is untouched.
-        $this->assertSame('sandbox', IntegrationConfig::mode('easyparcel'));
+    }
+
+    #[Test]
+    public function easyparcel_has_no_environment_toggle(): void
+    {
+        // Its official reference: the environment "is determined by the
+        // EasyParcel account that the user logs in with during authorization".
+        // One host, one client ID — a toggle would imply control we do not have.
+        $this->assertSame(['toyyibpay'], IntegrationConfig::MODE_SELECTABLE);
+
+        $this->actingAs($this->admin)
+            ->patch('/admin/integrations/easyparcel/mode', ['mode' => 'production'])
+            ->assertNotFound();
+    }
+
+    #[Test]
+    public function the_integrations_page_explains_how_easyparcel_picks_its_environment(): void
+    {
+        $html = $this->actingAs($this->admin)
+            ->get(route('admin.integrations.index'))->assertOk()->getContent();
+
+        $this->assertStringContainsString('decided by the account you authorise', $html);
+        // And offers no switch for it.
+        $this->assertStringNotContainsString('integrations/easyparcel/mode', $html);
     }
 
     #[Test]
