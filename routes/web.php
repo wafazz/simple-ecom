@@ -111,12 +111,11 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
         Route::get('/integrations/easyparcel/callback', [IntegrationController::class, 'callback'])->name('integrations.callback');
         Route::delete('/integrations/easyparcel', [IntegrationController::class, 'disconnect'])->name('integrations.disconnect');
 
-        // Variations + stock (REQ-002, REQ-008)
+        // Stock (REQ-008). Variants are DEFINED on the product form; this screen
+        // exists only for the day-to-day job of adjusting quantities.
         // The param is {variant}, not {variation}: a custom key turns on scoped
         // bindings, and Laravel resolves the child via Product::variants().
-        Route::get('/products/{product:id}/variations', [VariationController::class, 'index'])->name('products.variations.index');
-        Route::post('/products/{product:id}/variations', [VariationController::class, 'store'])->name('products.variations.store');
-        Route::put('/products/{product:id}/variations/{variant:id}', [VariationController::class, 'update'])->name('products.variations.update');
-        Route::patch('/products/{product:id}/variations/{variant:id}/stock', [VariationController::class, 'updateStock'])->name('products.variations.stock');
+        Route::get('/products/{product:id}/stock', [VariationController::class, 'index'])->name('products.variations.index');
+        Route::patch('/products/{product:id}/stock/{variant:id}', [VariationController::class, 'updateStock'])->name('products.variations.stock');
     });
 });

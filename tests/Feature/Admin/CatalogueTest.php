@@ -27,6 +27,24 @@ class CatalogueTest extends TestCase
         $this->admin = User::factory()->create();
     }
 
+    /** A product form submission: product fields plus at least one variation. */
+    private function productPayload(array $overrides = [], array $variant = []): array
+    {
+        return array_merge([
+            'category_id' => Category::factory()->create()->id,
+            'name' => 'Hoodie',
+            'product_type' => 'simple',
+            'variants' => [array_merge([
+                'id' => '',
+                'sku' => 'HOOD-STD',
+                'price' => '89.90',
+                'stock_qty' => 5,
+                'weight_g' => 700,
+                'status' => 'active',
+            ], $variant)],
+        ], $overrides);
+    }
+
     #[Test]
     public function a_guest_cannot_reach_any_catalogue_screen(): void
     {
@@ -94,19 +112,33 @@ class CatalogueTest extends TestCase
     }
 
     #[Test]
-    public function a_new_product_sends_the_admin_straight_to_variations(): void
+    public function a_product_and_its_variation_are_created_in_one_submission(): void
     {
-        // A product with no variants cannot be sold, so the flow must not stop
-        // at "product created".
-        $category = Category::factory()->create();
-
-        $response = $this->actingAs($this->admin)->post(route('admin.products.store'), [
-            'category_id' => $category->id,
-            'name' => 'Hoodie',
-        ]);
+        // One form defines both. A product with no variant cannot be sold, so
+        // the two are never created separately.
+        $this->actingAs($this->admin)
+            ->post(route('admin.products.store'), $this->productPayload())
+            ->assertRedirect(route('admin.products.index'));
 
         $product = Product::where('slug', 'hoodie')->firstOrFail();
-        $response->assertRedirect(route('admin.products.variations.index', $product));
+
+        $this->assertSame(1, $product->variants()->count());
+        $this->assertDatabaseHas('product_variants', [
+            'product_id' => $product->id,
+            'sku' => 'HOOD-STD',
+            'price_minor' => 8990,
+            'stock_qty' => 5,
+        ]);
+    }
+
+    #[Test]
+    public function a_product_cannot_be_created_without_a_variation(): void
+    {
+        $this->actingAs($this->admin)
+            ->post(route('admin.products.store'), $this->productPayload(['variants' => []]))
+            ->assertSessionHasErrors('variants');
+
+        $this->assertSame(0, Product::count());
     }
 
     #[Test]
@@ -115,11 +147,11 @@ class CatalogueTest extends TestCase
         Storage::fake('uploads');
         $category = Category::factory()->create();
 
-        $this->actingAs($this->admin)->post(route('admin.products.store'), [
+        $this->actingAs($this->admin)->post(route('admin.products.store'), $this->productPayload([
             'category_id' => $category->id,
             'name' => 'Cap',
             'image' => UploadedFile::fake()->image('../../evil name.jpg'),
-        ]);
+        ], ['sku' => 'CAP-STD']));
 
         $path = Product::where('slug', 'cap')->firstOrFail()->image_path;
 
@@ -136,11 +168,11 @@ class CatalogueTest extends TestCase
         Storage::fake('uploads');
         $category = Category::factory()->create();
 
-        $this->actingAs($this->admin)->post(route('admin.products.store'), [
+        $this->actingAs($this->admin)->post(route('admin.products.store'), $this->productPayload([
             'category_id' => $category->id,
             'name' => 'Payload',
             'image' => UploadedFile::fake()->create('shell.php', 10, 'application/x-php'),
-        ])->assertSessionHasErrors('image');
+        ], ['sku' => 'PAY-STD']))->assertSessionHasErrors('image');
 
         $this->assertDatabaseMissing('products', ['slug' => 'payload']);
     }

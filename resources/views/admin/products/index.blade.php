@@ -41,8 +41,8 @@
                             </span>
                         </td>
                         <td class="text-end">
-                            <a href="{{ route('admin.products.variations.index', $product) }}" class="btn btn-sm btn-outline-primary">Variations</a>
                             <a href="{{ route('admin.products.edit', $product) }}" class="btn btn-sm btn-outline-secondary">Edit</a>
+                            <a href="{{ route('admin.products.variations.index', $product) }}" class="btn btn-sm btn-outline-primary">Stock</a>
                             <form method="POST" action="{{ route('admin.products.toggle', $product) }}" class="d-inline">
                                 @csrf @method('PATCH')
                                 <button class="btn btn-sm btn-outline-{{ $product->is_active ? 'warning' : 'success' }}">

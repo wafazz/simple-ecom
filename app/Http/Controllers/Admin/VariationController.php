@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\VariationRequest;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\Setting;
@@ -12,7 +11,13 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 
-/** REQ-002 / REQ-008 — Planning §7.1, §7.5. */
+/**
+ * REQ-008 — stock adjustment only.
+ *
+ * Variants are DEFINED on the product form (Planning §7.1); this screen exists
+ * for the job an admin does daily: changing quantities. Two places to create a
+ * variant would be two places to get the option rules wrong.
+ */
 class VariationController extends Controller
 {
     public function index(Product $product): View
@@ -22,26 +27,6 @@ class VariationController extends Controller
             'variants' => $product->variants()->orderBy('option1_value')->orderBy('option2_value')->get(),
             'lowStockThreshold' => Setting::getInt('low_stock_threshold', 5),
         ]);
-    }
-
-    public function store(VariationRequest $request, Product $product): RedirectResponse
-    {
-        $product->variants()->create($this->attributes($request));
-
-        return redirect()
-            ->route('admin.products.variations.index', $product)
-            ->with('status', 'Variation added.');
-    }
-
-    public function update(VariationRequest $request, Product $product, ProductVariant $variant): RedirectResponse
-    {
-        $this->assertBelongsTo($product, $variant);
-
-        $variant->update($this->attributes($request));
-
-        return redirect()
-            ->route('admin.products.variations.index', $product)
-            ->with('status', 'Variation updated.');
     }
 
     /**
@@ -69,32 +54,6 @@ class VariationController extends Controller
         ]);
 
         return back()->with('status', "Stock for {$variant->sku} updated.");
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function attributes(VariationRequest $request): array
-    {
-        $data = $request->safe()->except('price');
-
-        // '' not NULL — the unique index treats NULLs as distinct, so a null
-        // option slot would allow duplicate "no-option" variants (Planning §7.1).
-        foreach (['option1_name', 'option1_value', 'option2_name', 'option2_value'] as $field) {
-            $data[$field] = (string) ($data[$field] ?? '');
-        }
-
-        // An option value with no name (or vice versa) is a half-filled axis;
-        // collapse it so the row is internally consistent.
-        foreach ([1, 2] as $axis) {
-            if ($data["option{$axis}_value"] === '') {
-                $data["option{$axis}_name"] = '';
-            }
-        }
-
-        $data['price_minor'] = $request->priceMinor();
-
-        return $data;
     }
 
     private function assertBelongsTo(Product $product, ProductVariant $variant): void

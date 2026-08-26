@@ -299,6 +299,30 @@ Reproduces the spec's §9 example table exactly:
 - Limit: two option axes (sufficient for size + colour).
 - **Gotcha**: unused option slots store `''`, **never `NULL`**. MySQL treats NULLs as distinct in a unique index, so `NULL` would permit two "no-option" variants on the same product. Migration: `->default('')`, **not** `->nullable()`.
 
+#### 7.1a Admin flow — one form (revised 2026-08-27)
+
+A product and its variations are created and edited in a **single form**, following the
+pattern used in `dzi-holistik-ordering-system`: product fields, then repeatable variation
+rows, saved together in one transaction.
+
+A **Simple / Has variations** toggle sits on top of the same data — "simple" is not a
+schema case, it is one variant whose option slots are empty strings (§7.1). The server
+enforces that independently of the toggle.
+
+`syncVariants()` upserts each submitted row by id (scoped to the product, so a forged id
+cannot reach another product's variant) and then handles the rows that disappeared. A
+removed variant is **deleted only when nothing references it**: `order_items` holds a
+`restrictOnDelete` foreign key because purchase history must outlive the catalogue
+(§12.2), so a variant that has ever been sold is **deactivated instead**, and the admin is
+told which ones and why.
+
+Not adopted from that project: product bundles, brand/HQ-cost/affiliate/dimension fields,
+and multiple images — none are in this project's scope or schema. Its jQuery was replaced
+with vanilla JS; this app ships no jQuery.
+
+The former stand-alone variation screen is now **stock only**. Two places to create a
+variant would be two places to get the `''`-not-`NULL` option rule wrong.
+
 ### 7.2 Option B — normalised option dictionary · OPTIONAL, not MVP
 
 `options` / `option_values` / pivot + `option_signature VARCHAR(191)` with `UNIQUE(product_id, option_signature)` — the shape recorded in `11-pattern-library.md` ("E-Commerce — Product Variants Without EAV"). Unlimited option axes and indexed catalogue-wide filtering.
