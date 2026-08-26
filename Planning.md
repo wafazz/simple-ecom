@@ -184,7 +184,7 @@ A single-vendor **Basic Custom E-Commerce Website** for a small business, on **L
 | Config | Laravel config + `.env` | §5, §31 |
 | Templating | **Blade**, auto-escaping | §6 |
 | Frontend | HTML5, CSS3, **Bootstrap 5.3**, vanilla JS where necessary | §6 |
-| Admin template | **AdminLTE 4.9.1** — vendored locally, no CDN, no build step (Planning §12.3) | §6 |
+| Admin template | **AdminLTE 4.9.1** — vendored locally, no CDN, no build step (Planning §5.3) | §6 |
 | HTTP client | `Http` facade (Guzzle, ships with Laravel) — `timeout()`, `retry()`, `Http::fake()` | §22 |
 | Testing | Laravel testing (**PHPUnit ^11.5**, Laravel 12 default) | §32 |
 | Tooling | Composer; Laravel Pint | §5, §30 |
@@ -212,6 +212,35 @@ Before any Composer package: (1) does Laravel 12 already provide it? (2) is it g
 - **Option 2 — remove Vite (recommended).** Delete `package.json`, `vite.config.js`, `resources/css`, `resources/js`. Bootstrap and one hand-written stylesheet are served from `public/` and referenced with `asset()`. No Node anywhere. Re-adding Vite later needs no application-code change.
 
 **Recommendation: Option 2** — it is the simplest thing that satisfies §6, and §33's environment list (PHP, MySQL, Composer, web server) contains no Node. **Flagged rather than assumed, because it deviates from the folder list in §19.** → approval item, Planning §18.
+
+---
+
+### 5.3 Admin template — AdminLTE 4 (added 2026-08-27, client request)
+
+The admin panel is built on **AdminLTE 4.9.1**, at the client's request. It is a
+CSS/JS theme over Bootstrap 5.3 — which this project already vendors — so it is a
+**template choice, not a framework change**: routes, controllers, Form Requests
+and the data layer are untouched by it.
+
+**Vendored locally**, exactly as Bootstrap is: `public/vendor/adminlte/`,
+`public/vendor/bootstrap-icons/` (plus its woff2) and
+`public/js/bootstrap.bundle.min.js`. No CDN at runtime (spec §6), and still no
+Node and no build step, so §5.2's decision stands unchanged. A test asserts that
+no admin page references `jsdelivr`, `cdnjs`, `unpkg` or Google Fonts, and that
+the icon CSS's relative font paths resolve on disk.
+
+**Not a Composer package**, so spec §30's dependency gate does not formally
+apply — but its intent does: one theme, added on request, *replacing*
+hand-written CSS rather than layering on top of it. The superseded
+`.admin-sidebar` rules were deleted from `app.css`, not left to rot.
+
+Cost: ~640 KB of admin-only assets. **The storefront is unchanged** and still
+loads only Bootstrap CSS plus one small stylesheet.
+
+**Found while doing this**: the storefront navbar toggler had used
+`data-bs-toggle` since Phase 4 while **Bootstrap's JS was never loaded on any
+page** — the mobile menu had been inert the whole time. Fixed and pinned by a
+test.
 
 ---
 
