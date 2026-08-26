@@ -130,6 +130,27 @@ class AdminLteAssetsTest extends TestCase
     }
 
     #[Test]
+    public function the_orders_parent_toggles_the_submenu_instead_of_navigating(): void
+    {
+        $html = $this->actingAs(User::factory()->create())
+            ->get(route('admin.dashboard'))->assertOk()->getContent();
+
+        // AdminLTE only suppresses navigation when the parent href is exactly
+        // "#". Any real URL there would toggle AND navigate.
+        $this->assertMatchesRegularExpression(
+            '/<a href="#" role="button"[^>]*>\s*<i class="nav-icon bi bi-receipt">/s',
+            $html,
+            'The Orders parent must be a toggle, not a link.'
+        );
+
+        // The list is still reachable — from the child entry.
+        $this->assertStringContainsString(
+            '<a href="'.route('admin.orders.index').'"',
+            $html
+        );
+    }
+
+    #[Test]
     public function the_orders_treeview_is_open_on_an_order_screen(): void
     {
         // A collapsed parent would hide which filter is currently applied.

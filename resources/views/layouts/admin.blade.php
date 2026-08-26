@@ -96,7 +96,14 @@
                     {{-- Treeview. Opens whenever an order screen is showing, so the
                          current filter is never hidden behind a collapsed parent. --}}
                     <li class="nav-item {{ $onOrders ? 'menu-open' : '' }}">
-                        <a href="{{ route('admin.orders.index') }}" class="nav-link {{ $onOrders ? 'active' : '' }}">
+                        {{-- href="#" is load-bearing, not laziness: AdminLTE's treeview
+                             handler only calls preventDefault() when the parent's href
+                             is exactly "#". Given a real URL it toggles AND navigates.
+                             This entry opens and closes the submenu; "All Orders" below
+                             is what actually reaches the list. --}}
+                        <a href="#" role="button"
+                           aria-expanded="{{ $onOrders ? 'true' : 'false' }}"
+                           class="nav-link {{ $onOrders ? 'active' : '' }}">
                             <i class="nav-icon bi bi-receipt"></i>
                             <p>
                                 Orders
