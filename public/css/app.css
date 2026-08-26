@@ -133,8 +133,8 @@ footer.shop-footer {
 .stat-tile--sales      { background: #17804d; }
 .stat-tile--collection { background: #1ec3e6; }
 .stat-tile--orders     { background: #0d63f0; }
-.stat-tile--ads        { background: #fdc010; color: #1c1f23; }
-.stat-tile--roas       { background: #1c1f23; }
+.stat-tile--aov        { background: #fdc010; color: #1c1f23; }
+.stat-tile--conversion { background: #1c1f23; }
 
 /* An untracked metric must not look like a measured zero. */
 .stat-tile--untracked { background: #6c757d; }

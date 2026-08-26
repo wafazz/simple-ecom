@@ -28,19 +28,36 @@ class DashboardController extends Controller
     public function index(): View
     {
         $now = now();
-        $adsCostMinor = Setting::getInt('ads_cost_minor', 0);
         $totalSalesMinor = $this->salesMinor();
+        $ordersCount = Order::query()->count();
+        $paidOrdersCount = Order::query()->where('payment_status', PaymentStatus::Paid->value)->count();
+        $soldOrdersCount = $this->soldOrdersCount();
 
         return view('admin.dashboard', [
             'totalSalesMinor' => $totalSalesMinor,
             'totalCollectionMinor' => $this->collectionMinor(),
-            'ordersCount' => Order::query()->count(),
+            'ordersCount' => $ordersCount,
 
-            // No advertising spend exists in this system's data — this is a
-            // figure the admin maintains in Settings. Zero means "not tracked",
-            // and the tiles say so rather than showing a fabricated number.
-            'adsCostMinor' => $adsCostMinor,
-            'roas' => $adsCostMinor > 0 ? $totalSalesMinor / $adsCostMinor : null,
+            // Average order value across orders that actually count as sales.
+            // Null rather than zero when there are none — an average of nothing
+            // is not RM 0, it is undefined.
+            'avgOrderValueMinor' => $soldOrdersCount > 0
+                ? intdiv($totalSalesMinor, $soldOrdersCount)
+                : null,
+
+            // How many placed orders end up paid. The closest thing this store
+            // has to a funnel metric: the rest are abandoned at the gateway.
+            'paymentConversion' => $ordersCount > 0
+                ? ($paidOrdersCount / $ordersCount) * 100
+                : null,
+            'paidOrdersCount' => $paidOrdersCount,
+            'soldOrdersCount' => $soldOrdersCount,
+
+            // Money placed but never collected — invisible in Total Sales,
+            // which excludes it by definition.
+            'awaitingPaymentMinor' => (int) Order::query()
+                ->where('payment_status', PaymentStatus::Pending->value)
+                ->sum('grand_total_minor'),
 
             'comparisons' => [
                 $this->comparison('Today vs Yesterday',
@@ -110,6 +127,17 @@ class DashboardController extends Controller
             ))
             ->when($from, fn ($q) => $q->whereBetween('created_at', [$from, $to]))
             ->sum('grand_total_minor');
+    }
+
+    /** How many orders count as sales — the denominator for average order value. */
+    private function soldOrdersCount(): int
+    {
+        return Order::query()
+            ->whereNotIn('order_status', array_map(
+                fn (OrderStatus $s): string => $s->value,
+                self::EXCLUDED_FROM_SALES
+            ))
+            ->count();
     }
 
     /** Money actually received — settled payments only. */

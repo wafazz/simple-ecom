@@ -34,9 +34,8 @@ class SettingController extends Controller
 
     public function update(SettingRequest $request): RedirectResponse
     {
-        $values = $request->safe()->except(['flat_shipping_fee', 'ads_cost']);
+        $values = $request->safe()->except('flat_shipping_fee');
         $values['flat_shipping_fee_minor'] = (string) $request->flatShippingFeeMinor();
-        $values['ads_cost_minor'] = (string) $request->adsCostMinor();
 
         foreach ($values as $key => $value) {
             Setting::put($key, (string) $value);

@@ -41,42 +41,34 @@
         </div>
 
         <div class="col-12 col-md-4">
-            @if ($adsCostMinor > 0)
-                <div class="stat-tile stat-tile--ads">
-                    <p class="stat-tile__value">{{ \App\Support\Money::displayWhole($adsCostMinor, $symbol) }}</p>
-                    <p class="stat-tile__label">Ads Cost</p>
-                    <i class="stat-tile__icon bi bi-megaphone" aria-hidden="true"></i>
+            @if ($avgOrderValueMinor !== null)
+                <div class="stat-tile stat-tile--aov">
+                    <p class="stat-tile__value">{{ \App\Support\Money::displayGrouped($avgOrderValueMinor, $symbol) }}</p>
+                    <p class="stat-tile__label">Average Order Value</p>
+                    <p class="stat-tile__note">across {{ number_format($soldOrdersCount) }} sold orders</p>
+                    <i class="stat-tile__icon bi bi-receipt-cutoff" aria-hidden="true"></i>
                 </div>
             @else
-                {{-- Ad spend is not in the order data. Showing RM 0 here would
-                     read as "we spent nothing", which is a different claim from
-                     "we do not track this". --}}
                 <div class="stat-tile stat-tile--untracked">
-                    <p class="stat-tile__value">Not tracked</p>
-                    <p class="stat-tile__label">Ads Cost</p>
-                    <p class="stat-tile__note">
-                        <a href="{{ route('admin.settings.edit') }}" class="text-white text-decoration-underline">
-                            Enter it in Settings
-                        </a>
-                    </p>
-                    <i class="stat-tile__icon bi bi-megaphone" aria-hidden="true"></i>
+                    <p class="stat-tile__value">No sales yet</p>
+                    <p class="stat-tile__label">Average Order Value</p>
+                    <i class="stat-tile__icon bi bi-receipt-cutoff" aria-hidden="true"></i>
                 </div>
             @endif
         </div>
 
         <div class="col-12 col-md-4">
-            @if ($roas !== null)
-                <div class="stat-tile stat-tile--roas">
-                    <p class="stat-tile__value">{{ number_format($roas, 2) }}x</p>
-                    <p class="stat-tile__label">ROAS</p>
-                    <p class="stat-tile__note">sales ÷ ads cost</p>
+            @if ($paymentConversion !== null)
+                <div class="stat-tile stat-tile--conversion">
+                    <p class="stat-tile__value">{{ number_format($paymentConversion, 1) }}%</p>
+                    <p class="stat-tile__label">Payment Conversion</p>
+                    <p class="stat-tile__note">{{ number_format($paidOrdersCount) }} of {{ number_format($ordersCount) }} orders paid</p>
                     <i class="stat-tile__icon bi bi-bullseye" aria-hidden="true"></i>
                 </div>
             @else
                 <div class="stat-tile stat-tile--untracked">
-                    <p class="stat-tile__value">Not tracked</p>
-                    <p class="stat-tile__label">ROAS</p>
-                    <p class="stat-tile__note">needs an ads cost</p>
+                    <p class="stat-tile__value">No orders yet</p>
+                    <p class="stat-tile__label">Payment Conversion</p>
                     <i class="stat-tile__icon bi bi-bullseye" aria-hidden="true"></i>
                 </div>
             @endif
@@ -166,11 +158,14 @@
                     @endif
 
                     @if ($pendingOrders > 0)
-                        <p class="mb-3">
-                            <span class="badge text-bg-secondary">{{ $pendingOrders }}</span>
-                            awaiting payment —
-                            <a href="{{ route('admin.orders.index', ['payment_status' => 'pending']) }}">view</a>
-                        </p>
+                        <div class="callout callout-info mb-3">
+                            <strong>{{ number_format($pendingOrders) }}</strong>
+                            order{{ $pendingOrders === 1 ? '' : 's' }} awaiting payment, worth
+                            <strong>{{ \App\Support\Money::displayGrouped($awaitingPaymentMinor, $symbol) }}</strong>.
+                            {{-- Deliberately absent from Total Sales, which excludes
+                                 unpaid orders — so it is shown here instead. --}}
+                            <a href="{{ route('admin.orders.index', ['payment_status' => 'pending']) }}">View</a>
+                        </div>
                     @endif
 
                     @if ($lowStock->isNotEmpty())

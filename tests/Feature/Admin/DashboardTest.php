@@ -5,7 +5,6 @@ namespace Tests\Feature\Admin;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
 use App\Models\Order;
-use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
@@ -81,29 +80,70 @@ class DashboardTest extends TestCase
     }
 
     #[Test]
-    public function ads_cost_and_roas_read_not_tracked_when_no_spend_is_recorded(): void
+    public function average_order_value_is_the_mean_of_orders_that_count_as_sales(): void
     {
-        // RM 0 would claim "we spent nothing", which is a different statement
-        // from "we do not track this".
-        $this->order(OrderStatus::Processing, PaymentStatus::Paid, 10000);
+        $this->order(OrderStatus::Completed, PaymentStatus::Paid, 10000);
+        $this->order(OrderStatus::Completed, PaymentStatus::Paid, 20000);
+        // Neither of these is a sale, so neither may move the average.
+        $this->order(OrderStatus::PendingPayment, PaymentStatus::Pending, 999999);
+        $this->order(OrderStatus::Cancelled, PaymentStatus::Failed, 999999);
 
         $this->actingAs($this->admin)->get(route('admin.dashboard'))
             ->assertOk()
-            ->assertViewHas('roas', null)
-            ->assertSee('Not tracked')
-            ->assertDontSee('0.00x');
+            ->assertViewHas('avgOrderValueMinor', 15000)
+            ->assertViewHas('soldOrdersCount', 2);
     }
 
     #[Test]
-    public function roas_is_calculated_once_an_ads_cost_exists(): void
+    public function average_order_value_is_undefined_rather_than_zero_with_no_sales(): void
     {
-        $this->order(OrderStatus::Processing, PaymentStatus::Paid, 210784794);
-        Setting::put('ads_cost_minor', '63114800');
+        // An average of nothing is not RM 0.00.
+        $this->order(OrderStatus::PendingPayment, PaymentStatus::Pending, 5000);
 
         $this->actingAs($this->admin)->get(route('admin.dashboard'))
             ->assertOk()
-            ->assertSee('3.34x')
-            ->assertDontSee('Not tracked');
+            ->assertViewHas('avgOrderValueMinor', null)
+            ->assertSee('No sales yet');
+    }
+
+    #[Test]
+    public function payment_conversion_is_the_share_of_orders_that_got_paid(): void
+    {
+        foreach (range(1, 8) as $i) {
+            $this->order(OrderStatus::Completed, PaymentStatus::Paid, 1000);
+        }
+        $this->order(OrderStatus::PendingPayment, PaymentStatus::Pending, 1000);
+        $this->order(OrderStatus::PendingPayment, PaymentStatus::Pending, 1000);
+
+        $response = $this->actingAs($this->admin)->get(route('admin.dashboard'))->assertOk();
+
+        $this->assertEqualsWithDelta(80.0, $response->viewData('paymentConversion'), 0.01);
+        $response->assertSee('80.0%')->assertSee('8 of 10 orders paid');
+    }
+
+    #[Test]
+    public function payment_conversion_is_undefined_with_no_orders_at_all(): void
+    {
+        $this->actingAs($this->admin)->get(route('admin.dashboard'))
+            ->assertOk()
+            ->assertViewHas('paymentConversion', null)
+            ->assertSee('No orders yet');
+    }
+
+    #[Test]
+    public function money_awaiting_payment_is_surfaced_because_total_sales_excludes_it(): void
+    {
+        $this->order(OrderStatus::Completed, PaymentStatus::Paid, 10000);
+        $this->order(OrderStatus::PendingPayment, PaymentStatus::Pending, 4500);
+        $this->order(OrderStatus::PendingPayment, PaymentStatus::Pending, 2500);
+
+        $response = $this->actingAs($this->admin)->get(route('admin.dashboard'))->assertOk();
+
+        $response->assertViewHas('awaitingPaymentMinor', 7000);
+        // Absent from the headline figure by definition, so it must appear
+        // somewhere the owner will actually see it.
+        $response->assertViewHas('totalSalesMinor', 10000);
+        $response->assertSee('RM 70.00');
     }
 
     #[Test]
