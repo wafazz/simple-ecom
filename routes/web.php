@@ -4,7 +4,9 @@ use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\IntegrationController;
+use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
+use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\VariationController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
@@ -86,6 +88,16 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
         Route::get('/products/{product:id}/edit', [AdminProductController::class, 'edit'])->name('products.edit');
         Route::put('/products/{product:id}', [AdminProductController::class, 'update'])->name('products.update');
         Route::patch('/products/{product:id}/toggle', [AdminProductController::class, 'toggle'])->name('products.toggle');
+
+        // Orders (REQ-007)
+        Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
+        Route::get('/orders/{order:id}', [OrderController::class, 'show'])->name('orders.show');
+        Route::patch('/orders/{order:id}/status', [OrderController::class, 'updateStatus'])->name('orders.status');
+        Route::patch('/orders/{order:id}/refund', [OrderController::class, 'markRefunded'])->name('orders.refund');
+
+        // Settings (REQ-011)
+        Route::get('/settings', [SettingController::class, 'edit'])->name('settings.edit');
+        Route::put('/settings', [SettingController::class, 'update'])->name('settings.update');
 
         // EasyParcel connection (REQ-006)
         Route::get('/integrations', [IntegrationController::class, 'index'])->name('integrations.index');

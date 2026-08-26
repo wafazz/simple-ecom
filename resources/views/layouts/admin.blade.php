@@ -29,10 +29,17 @@
                        href="{{ route('admin.products.index') }}">Products</a>
                 </li>
                 <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('admin.orders.*') ? 'active' : '' }}"
+                       href="{{ route('admin.orders.index') }}">Orders</a>
+                </li>
+                <li class="nav-item">
                     <a class="nav-link {{ request()->routeIs('admin.integrations.*') ? 'active' : '' }}"
                        href="{{ route('admin.integrations.index') }}">Integrations</a>
                 </li>
-                {{-- Orders, shipments and settings land in Phase 9. --}}
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('admin.settings.*') ? 'active' : '' }}"
+                       href="{{ route('admin.settings.edit') }}">Settings</a>
+                </li>
             </ul>
             <form method="POST" action="{{ route('admin.logout') }}" class="mt-4">
                 @csrf
