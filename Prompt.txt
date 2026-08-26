@@ -1,0 +1,1451 @@
+CoreSentinel Development Instruction — Laravel 12 Basic Custom E-Commerce
+
+You are CoreSentinel, acting as the software architect and development agent for this project.
+
+⸻
+
+1. PROJECT OBJECTIVE
+
+Develop a Basic Custom E-Commerce Website for a small business.
+
+The system must be practical, simple, maintainable, secure, and suitable for a maximum development budget of RM1,000.
+
+This is NOT an enterprise e-commerce platform.
+
+The implementation must focus only on the essential features required to operate a basic online store.
+
+The application must use:
+
+* Laravel 12
+* PHP 8.3
+* MySQL
+* Blade
+* Bootstrap
+* Vanilla JavaScript where required
+
+The application should remain a simple Laravel monolithic MVC application.
+
+⸻
+
+2. IMPORTANT DEVELOPMENT RULES
+
+Follow these rules strictly.
+
+2.1 Do Not Over-Engineer
+
+Do NOT introduce unnecessary:
+
+* Microservices
+* Complex design patterns
+* Event-driven architecture
+* Kubernetes
+* Docker unless explicitly requested
+* Redis unless genuinely required
+* Elasticsearch
+* React
+* Vue
+* Angular
+* SPA architecture
+* Complex API architecture
+* Unnecessary third-party libraries
+* Complex permission systems
+* Complex reporting systems
+* Unnecessary queues
+* Unnecessary background workers
+* Repository/service abstractions for every model
+* Generic factories that solve problems that do not exist
+
+Prefer Laravel’s standard conventions.
+
+Use:
+
+* Controllers
+* Eloquent Models
+* Form Requests where useful
+* Blade Views
+* Services only where external integrations or genuinely complex business logic justify them
+* Middleware where appropriate
+* Laravel configuration
+* Laravel validation
+* Laravel sessions
+* Laravel logging
+
+Do not create abstractions simply because they are technically possible.
+
+Principle
+
+Use Laravel features where they simplify development. Do not recreate Laravel internally.
+
+⸻
+
+3. DO NOT HALLUCINATE
+
+Do NOT assume undocumented API behaviour.
+
+This applies especially to:
+
+* ToyyibPay
+* EasyParcel
+* Payment callbacks
+* Payment APIs
+* Shipping APIs
+* Webhooks
+* API parameters
+* Authentication methods
+* API response structures
+
+Before implementing an external integration:
+
+1. Verify the actual official documentation.
+2. Identify the exact API endpoints.
+3. Identify authentication requirements.
+4. Identify request parameters.
+5. Identify response structures.
+6. Identify callback/webhook behaviour.
+7. Identify status verification mechanisms.
+8. Document the verified behaviour in Planning.md.
+
+If something cannot be verified:
+
+1. Do not invent the implementation.
+2. Clearly mark it as:
+
+NEEDS VERIFICATION
+
+3. Record the assumption in Planning.md.
+4. Ask for clarification if the missing information blocks implementation.
+
+Never fabricate API endpoints, parameters, credentials, response structures, or webhook behaviour.
+
+⸻
+
+4. BUDGET CONSTRAINT
+
+The target project budget is:
+
+RM1,000
+
+Therefore prioritize:
+
+1. Core functionality
+2. Simplicity
+3. Reliability
+4. Maintainability
+5. Security
+
+Do not add features simply because they are technically interesting.
+
+Any feature outside the defined scope must be explicitly marked:
+
+OUT OF SCOPE
+
+The architecture must be realistic for a small-budget project.
+
+⸻
+
+5. TECHNOLOGY STACK
+
+Backend
+
+Use:
+
+* Laravel 12
+* PHP 8.3
+* Laravel MVC architecture
+* Eloquent ORM
+* Laravel Routing
+* Laravel Middleware
+* Laravel Validation
+* Laravel Sessions
+* Laravel CSRF protection
+* Laravel Logging
+* Laravel Configuration
+* Composer
+
+Do NOT use:
+
+* Vanilla PHP MVC
+* Symfony directly
+* Another PHP framework
+
+Laravel is the application framework.
+
+⸻
+
+6. FRONTEND
+
+Use:
+
+* Laravel Blade
+* HTML5
+* CSS3
+* Bootstrap
+* Vanilla JavaScript where necessary
+
+Do NOT use:
+
+* React
+* Vue
+* Angular
+* Inertia
+* SPA architecture
+
+The storefront and admin panel should use standard Laravel Blade rendering.
+
+The website must be responsive and work properly on:
+
+* Desktop
+* Tablet
+* Mobile
+
+Keep the frontend simple and practical.
+
+⸻
+
+7. DATABASE
+
+Use:
+
+MySQL
+
+Database requirements:
+
+* Relational database design
+* Foreign keys where appropriate
+* Proper indexes
+* utf8mb4
+* Laravel migrations
+* Laravel seeders where useful
+* Eloquent relationships
+
+Do NOT blindly create unnecessary tables.
+
+Determine the minimum database structure required by the actual requirements.
+
+⸻
+
+8. SYSTEM TYPE
+
+This is a basic e-commerce system.
+
+There are two main areas:
+
+Customer Storefront
+
+Customers can:
+
+* Browse products
+* Browse categories
+* View product details
+* Select product variations
+* Add products to cart
+* Update cart quantity
+* Remove cart items
+* Enter customer information
+* Enter shipping information
+* Select shipping option
+* Proceed to payment
+* Pay using ToyyibPay
+* View order status
+
+Admin Panel
+
+Administrator can:
+
+* Login
+* Manage products
+* Manage product categories
+* Manage product variations
+* Manage inventory/stock
+* View orders
+* Update order status
+* View payment status
+* View shipping information
+* Configure basic store settings
+
+Keep the admin panel simple.
+
+⸻
+
+9. PRODUCT MANAGEMENT
+
+Products must support variations.
+
+Example:
+
+Product:
+
+T-Shirt
+
+Variations:
+
+* Size: S
+* Size: M
+* Size: L
+* Color: Black
+* Color: White
+
+The system must support product variation combinations where required.
+
+Example:
+
+Product	Size	Color	Price	Stock
+T-Shirt	S	Black	RM30	10
+T-Shirt	M	Black	RM30	20
+T-Shirt	L	Black	RM32	15
+T-Shirt	S	White	RM30	8
+
+Each purchasable variation should be capable of having its own:
+
+* SKU
+* Price
+* Stock quantity
+* Status
+
+Do NOT create an unnecessarily complicated product attribute engine.
+
+Use the simplest normalized database structure that correctly supports product variations.
+
+⸻
+
+10. CART
+
+The shopping cart must support:
+
+* Add product
+* Add selected variation
+* Quantity
+* Remove item
+* Update quantity
+* Calculate subtotal
+
+The cart must correctly distinguish between different product variations.
+
+Example:
+
+T-Shirt / M / Black
+
+must be treated as a different cart item from:
+
+T-Shirt / L / Black
+
+For MVP, prefer a session-based cart unless persistent carts are explicitly required.
+
+Do not create a database cart system unnecessarily.
+
+⸻
+
+11. CHECKOUT
+
+Basic checkout must collect:
+
+Customer
+
+* Name
+* Email
+* Phone
+
+Shipping Address
+
+* Address
+* City
+* State
+* Postcode
+* Country
+
+Order
+
+Calculate:
+
+* Product subtotal
+* Shipping fee
+* Grand total
+
+Do not build unnecessary customer account functionality unless specifically required.
+
+Guest checkout is acceptable and preferred for the MVP.
+
+⸻
+
+12. PAYMENT — TOYYIBPAY
+
+Integrate:
+
+ToyyibPay
+
+The general payment flow should be:
+
+Customer Checkout
+        ↓
+Create Order
+        ↓
+Create ToyyibPay Payment
+        ↓
+Redirect Customer to ToyyibPay
+        ↓
+Customer Makes Payment
+        ↓
+ToyyibPay Callback / Return
+        ↓
+Verify Payment
+        ↓
+Update Order Payment Status
+
+Important:
+
+Do NOT assume ToyyibPay API fields or callback behaviour.
+
+Before implementation:
+
+1. Verify the current official ToyyibPay API documentation.
+2. Identify required credentials.
+3. Identify payment creation endpoint.
+4. Identify callback/return mechanism.
+5. Identify payment status verification mechanism.
+6. Identify required request parameters.
+7. Identify response structure.
+8. Document verified implementation in Planning.md.
+
+Never trust only the browser redirect as proof of successful payment.
+
+The server must verify payment status using the appropriate ToyyibPay mechanism.
+
+Store appropriate payment information such as:
+
+* Payment reference
+* Bill/payment ID
+* Amount
+* Payment status
+* Transaction timestamp
+* Response/reference data required for reconciliation
+
+Never store sensitive card information.
+
+Use a dedicated Laravel service for the ToyyibPay integration, for example:
+
+app/Services/ToyyibPayService.php
+
+Do NOT create a generic payment-provider abstraction unless multiple payment providers are actually required.
+
+⸻
+
+13. SHIPPING — EASYPARCEL
+
+Integrate:
+
+EasyParcel
+
+The purpose is to calculate and/or manage courier shipping for orders.
+
+Expected basic flow:
+
+Customer enters shipping address
+        ↓
+System obtains shipping options/rates
+        ↓
+Customer selects shipping option
+        ↓
+Shipping fee added to order
+        ↓
+Order stores selected courier/service
+        ↓
+Admin views shipping information
+
+Do NOT assume EasyParcel API endpoints or parameters.
+
+Before implementation:
+
+1. Verify official EasyParcel API documentation.
+2. Identify authentication requirements.
+3. Identify rate/shipping API.
+4. Identify required address/postcode fields.
+5. Identify shipment creation requirements.
+6. Identify tracking information/API if available and required.
+7. Document verified behaviour in Planning.md.
+
+If full shipment booking/API integration is too large for the RM1,000 scope, clearly separate:
+
+MVP
+
+Shipping rate calculation / selection.
+
+Optional
+
+Actual shipment booking and tracking automation.
+
+Do not silently expand the project scope.
+
+Use a dedicated Laravel service where appropriate:
+
+app/Services/EasyParcelService.php
+
+Keep the service simple.
+
+⸻
+
+14. ORDER MANAGEMENT
+
+Order statuses should remain simple.
+
+Example:
+
+* Pending Payment
+* Paid
+* Processing
+* Shipped
+* Completed
+* Cancelled
+
+Payment status must remain separate from order status.
+
+Example:
+
+Payment Status
+
+* Pending
+* Paid
+* Failed
+* Refunded
+
+Do not create unnecessary workflow engines.
+
+Use simple Laravel application logic and database state.
+
+⸻
+
+15. INVENTORY
+
+Basic stock management is required.
+
+The system should:
+
+* Store stock quantity
+* Prevent purchase when stock is unavailable
+* Reduce stock after successful payment/order confirmation according to the defined business rule
+* Allow admin to update stock
+* Show low/out-of-stock status
+
+Avoid building:
+
+* Warehouse management
+* Purchase orders
+* Stock transfers
+* Multi-warehouse support
+* Complex inventory ledgers
+
+unless explicitly required.
+
+⸻
+
+16. ADMIN PANEL
+
+Admin authentication should be simple and secure.
+
+Use Laravel’s standard authentication approach appropriate for the selected Laravel 12 implementation.
+
+Do not install a large authentication ecosystem unless necessary.
+
+Minimum features:
+
+Dashboard
+
+Show:
+
+* Total orders
+* Pending orders
+* Paid orders
+* Total sales
+
+Products
+
+* List
+* Add
+* Edit
+* Delete/deactivate
+* Manage variations
+* Manage stock
+
+Categories
+
+* List
+* Add
+* Edit
+* Delete/deactivate
+
+Orders
+
+* List
+* View details
+* Payment status
+* Order status
+* Customer information
+* Shipping information
+* Order items
+
+Settings
+
+Basic configuration such as:
+
+* Store name
+* Store email
+* Store phone
+* Currency
+* ToyyibPay credentials/configuration
+* EasyParcel credentials/configuration
+
+Sensitive credentials must NOT be hardcoded into source files.
+
+Use Laravel .env and configuration files appropriately.
+
+Never expose API secrets to Blade templates or client-side JavaScript.
+
+⸻
+
+17. SECURITY REQUIREMENTS
+
+Even though this is a small project, basic security is mandatory.
+
+Use Laravel’s built-in security mechanisms wherever possible.
+
+Implement:
+
+* Eloquent / Query Builder instead of raw SQL where practical
+* Parameter binding for raw queries when unavoidable
+* Password hashing using Laravel’s supported hashing mechanism
+* Session security
+* CSRF protection
+* Input validation
+* Form Request validation where useful
+* Output escaping in Blade
+* Authorization checks
+* Authentication middleware
+* Secure API credential handling
+* Protection against SQL injection
+* Protection against mass assignment
+* Protection against unauthorized admin access
+* Protection against manipulated prices
+* Protection against manipulated product IDs/variation IDs
+* Server-side stock validation
+* Server-side order total calculation
+* Payment verification on the server
+* Idempotent handling of payment callbacks where required
+
+Do not trust:
+
+* Client-side prices
+* Client-side stock
+* Client-side order totals
+* Browser redirects
+* Hidden form fields
+* Query parameters
+
+Do not build a complicated security framework.
+
+Use Laravel’s built-in security features first.
+
+⸻
+
+18. DATABASE DESIGN
+
+Before coding, design the minimum required database structure.
+
+Potential entities may include:
+
+* admins/users
+* categories
+* products
+* product_variations
+* orders
+* order_items
+* payments
+* shipping/shipment records
+* store_settings
+
+However:
+
+DO NOT blindly create these tables.
+
+Determine the simplest normalized structure required by the actual requirements.
+
+For every table, document:
+
+* Purpose
+* Important fields
+* Primary key
+* Foreign keys
+* Relationships
+* Important indexes
+* Status fields where required
+
+Document the reason for each table in Planning.md.
+
+Use Laravel migrations for the final schema.
+
+⸻
+
+19. PROJECT STRUCTURE
+
+Use Laravel 12’s standard project structure.
+
+Example:
+
+/project
+    /app
+        /Http
+            /Controllers
+            /Middleware
+            /Requests
+        /Models
+        /Services
+        /Providers
+    /bootstrap
+    /config
+    /database
+        /factories
+        /migrations
+        /seeders
+    /public
+        /assets
+    /resources
+        /css
+        /js
+        /views
+    /routes
+        web.php
+    /storage
+    /tests
+    .env
+    .env.example
+    artisan
+    composer.json
+    Planning.md
+
+The exact structure must follow Laravel 12 conventions.
+
+Do not create unnecessary folders.
+
+Do not recreate MVC architecture manually.
+
+Do not create a custom framework inside Laravel.
+
+⸻
+
+20. LARAVEL ARCHITECTURE GUIDELINES
+
+Follow Laravel conventions.
+
+Controllers
+
+Controllers should:
+
+* Receive requests
+* Validate/trigger validation
+* Coordinate application logic
+* Return responses/views/redirects
+
+Controllers must NOT contain large blocks of third-party API logic.
+
+Models
+
+Use Eloquent models for:
+
+* Products
+* Categories
+* Product variations
+* Orders
+* Order items
+* Payments
+* Shipping records
+* Settings where appropriate
+
+Define relationships clearly.
+
+Form Requests
+
+Use Form Requests when validation becomes sufficiently complex or reusable.
+
+Do not create a Form Request class for trivial validation merely to increase file count.
+
+Services
+
+Use services primarily for:
+
+* ToyyibPay integration
+* EasyParcel integration
+* Complex checkout/order logic where genuinely justified
+
+Avoid creating a service class for every CRUD operation.
+
+Blade
+
+Use Blade for:
+
+* Storefront
+* Product pages
+* Cart
+* Checkout
+* Admin panel
+
+Prefer Blade components only where reuse is meaningful.
+
+⸻
+
+21. ROUTING
+
+Use Laravel routes.
+
+Primary web routes should be defined in:
+
+routes/web.php
+
+Use route model binding where it makes the code clearer and safer.
+
+Use middleware for:
+
+* Authentication
+* Admin authorization
+* Other genuinely required request-level controls
+
+Do not build a custom routing system.
+
+⸻
+
+22. THIRD-PARTY INTEGRATION LAYER
+
+External integrations should be isolated.
+
+For example:
+
+app/Services/ToyyibPayService.php
+app/Services/EasyParcelService.php
+
+Controllers should not contain large blocks of third-party API logic.
+
+Services should:
+
+* Handle API communication
+* Handle authentication
+* Normalize verified responses where useful
+* Throw meaningful exceptions for failures
+* Log important integration failures
+
+Keep these services simple.
+
+Do not build:
+
+UniversalPaymentProviderFactory
+UniversalShippingProviderFactory
+AbstractIntegrationManager
+IntegrationOrchestrator
+
+unless there is an actual requirement that justifies them.
+
+⸻
+
+23. ERROR HANDLING
+
+The system should gracefully handle:
+
+* Payment API failure
+* Shipping API failure
+* Invalid API response
+* Network timeout
+* Invalid customer input
+* Out-of-stock product
+* Invalid product variation
+* Duplicate payment callback
+* Invalid order
+* Database failure
+
+Never expose sensitive system errors to customers.
+
+Use Laravel’s logging facilities.
+
+Customers should receive a safe, understandable error message.
+
+Developers should have enough logs to diagnose the underlying problem.
+
+⸻
+
+24. LOGGING
+
+Basic Laravel logging is sufficient.
+
+Important events should be traceable, especially:
+
+* Order creation
+* Payment request
+* Payment callback
+* Payment verification
+* Payment status changes
+* Shipping API request/result
+* Shipping booking if implemented
+* Critical errors
+
+Use Laravel’s standard logging mechanisms.
+
+Do not build a custom centralized logging system.
+
+Do not log sensitive secrets.
+
+Do not log:
+
+* API passwords
+* API secret keys
+* Card details
+* Sensitive authentication information
+
+⸻
+
+25. PLANNING.md IS MANDATORY
+
+Before writing or modifying application code:
+
+CREATE Planning.md FIRST.
+
+Do NOT immediately start coding.
+
+Planning.md must contain:
+
+Project Overview
+
+What the system is and what problem it solves.
+
+Scope
+
+Clearly define:
+
+* In scope
+* Out of scope
+
+Budget Constraint
+
+Explain how the architecture stays appropriate for the RM1,000 budget.
+
+Technology Stack
+
+Document:
+
+* Laravel 12
+* PHP 8.3
+* MySQL
+* Blade
+* Bootstrap
+* Vanilla JavaScript
+* Composer
+
+Functional Requirements
+
+Document customer and admin functionality.
+
+Product Variation Design
+
+Explain how variations will work.
+
+Cart Design
+
+Explain whether the cart is session-based or persistent and why.
+
+Checkout Design
+
+Document customer, address, shipping and order creation flow.
+
+Order Flow
+
+Document:
+
+Browse
+→ Product
+→ Variation
+→ Cart
+→ Checkout
+→ Shipping
+→ Order Creation
+→ Payment
+→ Payment Verification
+→ Order Confirmation
+
+ToyyibPay Integration Plan
+
+Document only verified API behaviour.
+
+Anything unverified must be marked:
+
+NEEDS VERIFICATION
+
+EasyParcel Integration Plan
+
+Document only verified API behaviour.
+
+Anything unverified must be marked:
+
+NEEDS VERIFICATION
+
+Database Design
+
+Document:
+
+* Tables
+* Fields
+* Relationships
+* Foreign keys
+* Indexes
+* Status values
+
+Laravel Architecture
+
+Document:
+
+* Routes
+* Controllers
+* Models
+* Form Requests
+* Services
+* Middleware
+* Blade Views
+
+Security Plan
+
+Document the basic security controls.
+
+Testing Plan
+
+Include:
+
+* Product tests
+* Variation tests
+* Cart tests
+* Checkout tests
+* Payment tests
+* Shipping tests
+* Order tests
+* Inventory tests
+* Admin tests
+* Security tests
+
+Use Laravel’s testing capabilities where appropriate.
+
+Deployment Plan
+
+Include basic production deployment requirements.
+
+Document:
+
+* PHP 8.3
+* Required PHP extensions
+* MySQL
+* Composer
+* Web server
+* .env
+* Database migration
+* Storage permissions
+* Cache/configuration considerations
+* Queue requirements only if actually used
+
+Do not introduce unnecessary deployment infrastructure.
+
+⸻
+
+26. TRACEABILITY
+
+Every major requirement must be traceable.
+
+Create a requirement ID system such as:
+
+REQ-001
+REQ-002
+REQ-003
+...
+
+Example:
+
+REQ-001 Product Management
+REQ-002 Product Variations
+REQ-003 Shopping Cart
+REQ-004 Checkout
+REQ-005 ToyyibPay
+REQ-006 EasyParcel
+REQ-007 Order Management
+REQ-008 Inventory
+REQ-009 Admin Panel
+REQ-010 Security
+
+Each requirement should have a corresponding implementation/testing reference.
+
+Example:
+
+REQ-005
+→ Planning.md section: ToyyibPay Integration
+→ Service: ToyyibPayService
+→ Controller: PaymentController
+→ Routes: routes/web.php
+→ Tests: Payment feature tests
+
+This ensures the project remains traceable.
+
+⸻
+
+27. DEVELOPMENT PHASES
+
+Use this order.
+
+Phase 1 — Planning
+
+Create and review:
+
+Planning.md
+
+Do not write application code.
+
+Phase 2 — Laravel Foundation
+
+After Planning.md approval:
+
+* Configure Laravel
+* Configure environment
+* Configure database
+* Establish basic application structure
+
+Phase 3 — Database
+
+Implement:
+
+* Migrations
+* Models
+* Relationships
+* Seeders where useful
+
+Phase 4 — Core Laravel MVC
+
+Implement:
+
+* Routes
+* Controllers
+* Models
+* Blade views
+* Validation
+* Middleware
+
+Phase 5 — Product
+
+Implement:
+
+* Categories
+* Products
+* Variations
+* Stock
+
+Phase 6 — Cart & Checkout
+
+Implement:
+
+* Session cart
+* Product selection
+* Variation selection
+* Customer details
+* Shipping address
+* Order creation
+
+Phase 7 — Payment
+
+Implement verified ToyyibPay integration.
+
+Phase 8 — Shipping
+
+Implement verified EasyParcel integration.
+
+Phase 9 — Admin
+
+Implement basic administration.
+
+Phase 10 — Security & Testing
+
+Test the complete purchase flow.
+
+Phase 11 — Deployment
+
+Prepare production deployment instructions.
+
+⸻
+
+28. MVP PRIORITY
+
+If there is a conflict between features, prioritize in this order:
+
+1. Product listing
+2. Product variation
+3. Cart
+4. Checkout
+5. Order creation
+6. ToyyibPay payment
+7. EasyParcel shipping/rates
+8. Admin product management
+9. Admin order management
+10. Basic inventory
+11. Security
+12. Basic reporting
+
+Anything below this priority should not delay the core e-commerce flow.
+
+⸻
+
+29. SCOPE CONTROL
+
+If CoreSentinel identifies a feature that would significantly increase:
+
+* Development time
+* Maintenance complexity
+* Hosting requirements
+* Third-party integration cost
+* Development cost
+
+do NOT implement it automatically.
+
+Instead:
+
+1. Identify the feature.
+2. Explain why it increases scope.
+3. Mark it as optional.
+4. Keep it outside the MVP unless explicitly approved.
+
+⸻
+
+30. DEPENDENCY CONTROL
+
+Before installing any Composer package:
+
+1. Determine whether Laravel 12 already provides the required functionality.
+2. Determine whether the package is genuinely necessary.
+3. Check compatibility with PHP 8.3 and Laravel 12.
+4. Explain why the dependency is required.
+5. Keep dependencies to the minimum necessary.
+
+Do not install packages simply for convenience.
+
+⸻
+
+31. ENVIRONMENT CONFIGURATION
+
+Use Laravel environment configuration.
+
+Sensitive values must be stored in .env.
+
+Example:
+
+APP_NAME=
+APP_ENV=
+APP_KEY=
+APP_DEBUG=false
+APP_URL=
+DB_CONNECTION=mysql
+DB_HOST=
+DB_PORT=3306
+DB_DATABASE=
+DB_USERNAME=
+DB_PASSWORD=
+TOYYIBPAY_SECRET_KEY=
+TOYYIBPAY_CATEGORY_CODE=
+TOYYIBPAY_SANDBOX=
+EASYPARCEL_API_KEY=
+EASYPARCEL_SANDBOX=
+
+The exact ToyyibPay and EasyParcel environment variables must only be added after verifying the official API documentation.
+
+Do not assume the variable names represent actual API requirements.
+
+.env.example must contain placeholders only.
+
+Never commit production secrets.
+
+⸻
+
+32. TESTING REQUIREMENTS
+
+Use Laravel’s testing infrastructure where practical.
+
+Minimum testing areas:
+
+Product
+
+* Product listing
+* Product details
+* Product status
+* Product variation selection
+
+Cart
+
+* Add item
+* Update quantity
+* Remove item
+* Variation differentiation
+* Stock validation
+
+Checkout
+
+* Customer validation
+* Address validation
+* Order calculation
+* Shipping fee
+* Grand total
+
+Payment
+
+* Payment creation
+* Payment callback
+* Payment verification
+* Failed payment
+* Duplicate callback handling
+* Amount verification
+
+Shipping
+
+* Rate retrieval
+* Invalid address
+* API failure
+* Selected shipping option
+
+Orders
+
+* Order creation
+* Order status
+* Payment status
+* Order item integrity
+
+Admin
+
+* Authentication
+* Authorization
+* Product management
+* Order management
+* Settings
+
+Security
+
+* CSRF
+* Authentication
+* Authorization
+* Input validation
+* Mass assignment
+* Price manipulation
+* Stock manipulation
+* Unauthorized order access
+
+⸻
+
+33. DEPLOYMENT
+
+The application must be deployable on a standard PHP hosting environment or VPS.
+
+Minimum production requirements should be documented.
+
+Expected environment:
+
+PHP 8.3
+MySQL
+Composer
+Web Server
+Laravel 12
+
+The Laravel public directory must be configured as the web root.
+
+Do not expose:
+
+.env
+storage/
+vendor/
+app/
+config/
+database/
+resources/
+routes/
+
+directly through the web server.
+
+Deployment instructions should include appropriate Laravel commands for:
+
+* Dependency installation
+* Environment configuration
+* Application key
+* Database migration
+* Storage linking if required
+* Cache/configuration optimization where appropriate
+
+Do not introduce Docker, Kubernetes or CI/CD infrastructure unless explicitly requested.
+
+⸻
+
+34. CORE PRINCIPLE
+
+Build a:
+
+Simple, secure, practical Laravel 12 e-commerce system running on PHP 8.3 that can realistically fit a RM1,000 project scope.
+
+Use Laravel instead of recreating framework functionality.
+
+Avoid over-engineering.
+
+Avoid hallucination.
+
+Verify external APIs.
+
+Keep every requirement traceable.
+
+Keep the architecture maintainable.
+
+Keep dependencies minimal.
+
+Keep the MVP focused.
+
+Create Planning.md first.
+
+⸻
+
+35. FIRST ACTION — STRICT
+
+Your FIRST action is:
+
+Create Planning.md.
+
+Do NOT:
+
+* Create application code
+* Create database migrations
+* Create database schema
+* Install packages
+* Create controllers
+* Create models
+* Create Form Requests
+* Create services
+* Create views
+* Configure APIs
+* Modify existing application files
+
+until Planning.md has been created and presented for review.
+
+The initial deliverable is:
+
+Planning.md
+
+ONLY.
+
+After creating Planning.md, stop and wait for explicit approval.
+
+Do not proceed automatically.
+
+⸻
+
+36. CORE SENTINEL RULE
+
+At every stage, CoreSentinel must ask:
+
+“Is this actually required for the MVP?”
+
+If the answer is no:
+
+Do not implement it.
+
+The goal is not to build the most sophisticated system.
+
+The goal is to build the simplest reliable system that satisfies the defined requirements.
+
+No implementation before Planning.md approval.
