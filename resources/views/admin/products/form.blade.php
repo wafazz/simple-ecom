@@ -61,16 +61,46 @@
 
         <div class="col-lg-5">
             <div class="card mb-3">
-                <div class="card-header"><h2 class="card-title h6 mb-0">Image &amp; status</h2></div>
+                <div class="card-header"><h2 class="card-title h6 mb-0">Images &amp; status</h2></div>
                 <div class="card-body">
-                    <label for="image" class="form-label">Image <span class="text-muted small">(jpg/png/webp, max 2 MB)</span></label>
+                    <label for="image" class="form-label">
+                        Cover image <span class="text-muted small">(jpg/png/webp, max 2 MB)</span>
+                    </label>
                     <input type="file" name="image" id="image" accept="image/*"
                            class="form-control @error('image') is-invalid @enderror">
+                    <div class="form-text">Shown in listings, the cart and order screens.</div>
                     @error('image') <div class="invalid-feedback">{{ $message }}</div> @enderror
 
                     @if ($product->image_path)
                         <img src="{{ asset('uploads/'.$product->image_path) }}" alt=""
                              class="img-thumbnail mt-2" style="max-width: 8rem">
+                    @endif
+
+                    <hr>
+
+                    <label for="gallery" class="form-label">
+                        More views <span class="text-muted small">(up to 6)</span>
+                    </label>
+                    <input type="file" name="gallery[]" id="gallery" accept="image/*" multiple
+                           class="form-control @error('gallery.*') is-invalid @enderror">
+                    <div class="form-text">Extra photos shown on the product page gallery.</div>
+                    @error('gallery.*') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
+
+                    @if ($galleryImages->isNotEmpty())
+                        <div class="d-flex flex-wrap gap-2 mt-3">
+                            @foreach ($galleryImages as $image)
+                                {{-- Removal is a tick, not an instant delete: nothing
+                                     is lost until the form is saved. --}}
+                                <label class="position-relative" style="cursor: pointer">
+                                    <img src="{{ $image->url() }}" alt=""
+                                         class="img-thumbnail" style="width: 5.5rem; height: 5.5rem; object-fit: cover">
+                                    <span class="d-block text-center small mt-1">
+                                        <input type="checkbox" name="remove_images[]" value="{{ $image->id }}"
+                                               class="form-check-input me-1">Remove
+                                    </span>
+                                </label>
+                            @endforeach
+                        </div>
                     @endif
 
                     <div class="form-check mt-3">

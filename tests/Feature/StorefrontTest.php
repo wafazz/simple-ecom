@@ -55,9 +55,14 @@ class StorefrontTest extends TestCase
         $html = $this->get(route('home'))->assertOk()->getContent();
 
         $this->assertStringContainsString('/css/bootstrap.min.css', $html);
-        $this->assertStringContainsString('/css/app.css', $html);
+        // The storefront theme. app.css belongs to the admin panel now — the
+        // two stylesheets are deliberately separate.
+        $this->assertStringContainsString('/css/storefront.css', $html);
+        $this->assertStringContainsString('/vendor/bootstrap-icons/bootstrap-icons.css', $html);
         $this->assertStringNotContainsString('cdn.jsdelivr.net', $html);
         $this->assertStringNotContainsString('fonts.bunny.net', $html);
+        // No webfont host either: the display face is a system serif (§30).
+        $this->assertStringNotContainsString('fonts.googleapis.com', $html);
         $this->assertStringNotContainsString('/build/assets', $html);
     }
 

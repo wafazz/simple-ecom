@@ -29,8 +29,8 @@
         <p><x-status-badge :status="$order->order_status" /> <x-status-badge :status="$order->payment_status" /></p>
     </div>
 
-    <div class="card">
-        <div class="card-body">
+    <div class="panel">
+        <div class="panel__body">
             <table class="table table-sm align-middle mb-0">
                 <tbody>
                 @foreach ($order->items as $item)
@@ -54,7 +54,7 @@
     </div>
 
     <div class="mt-3 d-flex gap-2 flex-wrap">
-        <a href="{{ route('order-status.show') }}" class="btn btn-outline-secondary">Track this order</a>
+        <a href="{{ route('order-status.show') }}" class="btn btn-quiet">Track this order</a>
         @if (! $paid)
             <a href="{{ route('payment.pay', $order->order_no) }}" class="btn btn-shop">Try payment again</a>
         @endif

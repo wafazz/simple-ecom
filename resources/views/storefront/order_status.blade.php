@@ -5,8 +5,8 @@
 @section('content')
     <h1 class="h4 mb-3">Track Your Order</h1>
 
-    <div class="card mb-4">
-        <div class="card-body">
+    <div class="panel mb-4">
+        <div class="panel__body">
             <form method="POST" action="{{ route('order-status.lookup') }}" class="row g-3">
                 @csrf
                 <div class="col-md-5">
@@ -35,8 +35,8 @@
     @endif
 
     @if ($order)
-        <div class="card">
-            <div class="card-body">
+        <div class="panel">
+            <div class="panel__body">
                 <div class="d-flex justify-content-between flex-wrap gap-2 mb-3">
                     <div>
                         <p class="text-muted small mb-1">Order</p>

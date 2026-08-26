@@ -12,8 +12,8 @@
         </p>
     </div>
 
-    <div class="card">
-        <div class="card-body">
+    <div class="panel">
+        <div class="panel__body">
             <table class="table table-sm align-middle mb-0">
                 <tbody>
                 @foreach ($order->items as $item)

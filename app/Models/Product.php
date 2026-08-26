@@ -31,6 +31,52 @@ class Product extends Model
         return $this->hasMany(ProductVariant::class);
     }
 
+    /** Additional views. The cover lives on `image_path`, not here. */
+    public function images(): HasMany
+    {
+        return $this->hasMany(ProductImage::class)->orderBy('sort_order')->orderBy('id');
+    }
+
+    /**
+     * Every image for the gallery, cover first.
+     *
+     * @return array<int, string> URLs, empty when the product has no picture
+     */
+    public function galleryUrls(): array
+    {
+        $urls = [];
+
+        if ($this->image_path) {
+            $urls[] = asset('uploads/'.$this->image_path);
+        }
+
+        foreach ($this->images as $image) {
+            $urls[] = $image->url();
+        }
+
+        return $urls;
+    }
+
+    /**
+     * The one image used in listings, the cart and order screens.
+     *
+     * `image_path` answers this without touching the gallery — deliberately,
+     * because a listing renders 12 cards and reading the relation here would
+     * be 12 extra queries. The gallery is consulted ONLY when it is already
+     * loaded, so a product whose pictures are all "extra views" still shows
+     * one, and a listing that did not ask for the relation pays nothing.
+     */
+    public function coverUrl(): ?string
+    {
+        if ($this->image_path) {
+            return asset('uploads/'.$this->image_path);
+        }
+
+        return $this->relationLoaded('images')
+            ? $this->images->first()?->url()
+            : null;
+    }
+
     public function scopeActive($query)
     {
         return $query->where('is_active', true);

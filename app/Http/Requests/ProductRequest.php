@@ -34,6 +34,12 @@ class ProductRequest extends FormRequest
             ],
             'description' => ['nullable', 'string', 'max:5000'],
             'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+            // Additional gallery views. Same limits as the cover — a rule that
+            // is looser here would be a way around the cover's limit.
+            'gallery' => ['nullable', 'array', 'max:6'],
+            'gallery.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+            'remove_images' => ['nullable', 'array'],
+            'remove_images.*' => ['integer'],
             'is_active' => ['boolean'],
 
             'product_type' => ['required', Rule::in(['simple', 'variable'])],

@@ -2,15 +2,21 @@
 @section('title', 'Checkout')
 
 @section('content')
-    <h1 class="h4 mb-3">Checkout</h1>
+    <ol class="steps">
+        <li class="is-done"><a href="{{ route('cart.index') }}" class="text-decoration-none">Cart</a></li>
+        <li class="is-current">Details</li>
+        <li>Payment</li>
+    </ol>
+
+    <h1 class="h3 mb-4">Checkout</h1>
 
     <form method="POST" action="{{ route('checkout.store') }}">
         @csrf
         <div class="row g-4">
             <div class="col-lg-7">
-                <div class="card mb-3">
-                    <div class="card-body">
-                        <h2 class="h6 mb-3">Your details</h2>
+                <div class="panel mb-3">
+                    <div class="panel__head">Your details</div>
+                    <div class="panel__body">
                         <div class="row g-3">
                             <div class="col-md-12">
                                 <label for="customer_name" class="form-label">Full name</label>
@@ -38,9 +44,9 @@
                     </div>
                 </div>
 
-                <div class="card">
-                    <div class="card-body">
-                        <h2 class="h6 mb-3">Shipping address</h2>
+                <div class="panel">
+                    <div class="panel__head">Shipping address</div>
+                    <div class="panel__body">
                         <div class="row g-3">
                             <div class="col-12">
                                 <label for="address_line" class="form-label">Address</label>
@@ -86,9 +92,9 @@
             </div>
 
             <div class="col-lg-5">
-                <div class="card">
-                    <div class="card-body">
-                        <h2 class="h6 mb-3">Order summary</h2>
+                <div class="panel summary">
+                    <div class="panel__head">Order summary</div>
+                    <div class="panel__body">
                         <table class="table table-sm align-middle">
                             <tbody>
                             @foreach ($lines as $line)
@@ -125,7 +131,7 @@
                         <hr>
 
                         <h3 class="h6">Delivery</h3>
-                        <button type="button" id="get-rates" class="btn btn-outline-secondary btn-sm mb-2">
+                        <button type="button" id="get-rates" class="btn btn-quiet btn-sm mb-2">
                             Get courier rates
                         </button>
                         <p class="text-muted small" id="rates-hint">
@@ -146,11 +152,13 @@
                             </div>
                         </div>
 
-                        <button type="submit" class="btn btn-shop w-100">Place order &amp; pay</button>
+                        <button type="submit" class="btn btn-shop btn-lg w-100">Place order &amp; pay</button>
 
                         <p class="text-muted small mt-3 mb-0">
-                            You will be taken to ToyyibPay to complete payment.
-                            Courier rates are quoted at this step from Phase 8; a flat rate applies for now.
+                            <i class="bi bi-shield-check me-1" aria-hidden="true"></i>
+                            You will be taken to ToyyibPay to complete payment. Every price
+                            and the courier rate are recalculated on the server when you
+                            place the order.
                         </p>
                     </div>
                 </div>
@@ -217,16 +225,42 @@
             options.innerHTML = '';
             quotes.forEach(function (q, i) {
                 var id = 'rate-' + i;
+                // Built as DOM nodes, not innerHTML: the courier name and
+                // duration come from EasyParcel, and §17 says third-party
+                // strings are never trusted — including as markup.
                 var div = document.createElement('div');
                 div.className = 'form-check';
-                div.innerHTML = '<input class="form-check-input" type="radio" name="shipping_service_id"' +
-                    ' id="' + id + '" value="' + q.service_id + '" data-price="' + q.price_minor + '"' +
-                    (i === 0 ? ' checked' : '') + '>' +
-                    '<label class="form-check-label" for="' + id + '">' +
-                    q.label + ' — ' + q.price +
-                    (q.delivery_duration ? ' <span class="text-muted small">(' + q.delivery_duration + ')</span>' : '') +
-                    (q.is_flat ? ' <span class="badge text-bg-secondary">flat rate</span>' : '') +
-                    '</label>';
+
+                var input = document.createElement('input');
+                input.className = 'form-check-input';
+                input.type = 'radio';
+                input.name = 'shipping_service_id';
+                input.id = id;
+                input.value = q.service_id;
+                input.dataset.price = q.price_minor;
+                input.checked = i === 0;
+
+                var label = document.createElement('label');
+                label.className = 'form-check-label';
+                label.htmlFor = id;
+                label.appendChild(document.createTextNode(q.label + ' — ' + q.price));
+
+                if (q.delivery_duration) {
+                    var dur = document.createElement('span');
+                    dur.className = 'text-muted small';
+                    dur.textContent = ' (' + q.delivery_duration + ')';
+                    label.appendChild(dur);
+                }
+
+                if (q.is_flat) {
+                    var flag = document.createElement('span');
+                    flag.className = 'badge text-bg-secondary ms-1';
+                    flag.textContent = 'flat rate';
+                    label.appendChild(flag);
+                }
+
+                div.appendChild(input);
+                div.appendChild(label);
                 options.appendChild(div);
             });
 

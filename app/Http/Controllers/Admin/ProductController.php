@@ -35,6 +35,7 @@ class ProductController extends Controller
         return view('admin.products.form', [
             'product' => new Product(['is_active' => true]),
             'categories' => Category::query()->orderBy('name')->get(),
+            'galleryImages' => collect(),
             'variantRows' => [$this->blankRow()],
             'productType' => 'simple',
         ]);
@@ -49,6 +50,7 @@ class ProductController extends Controller
             ]);
 
             $this->syncVariants($product, $request);
+            $this->syncGallery($product, $request);
 
             return $product;
         });
@@ -65,6 +67,7 @@ class ProductController extends Controller
         return view('admin.products.form', [
             'product' => $product,
             'categories' => Category::query()->orderBy('name')->get(),
+            'galleryImages' => $product->images,
             'variantRows' => $variants->map(fn ($v): array => [
                 'id' => $v->id,
                 'sku' => $v->sku,
@@ -98,6 +101,7 @@ class ProductController extends Controller
             }
 
             $product->update($attributes);
+            $this->syncGallery($product, $request);
 
             return $this->syncVariants($product, $request);
         });
@@ -280,6 +284,46 @@ class ProductController extends Controller
                 .'likely not writable by the web server — see DEPLOYMENT.md. '
                 .'The product itself was not saved.',
         ]);
+    }
+
+    /**
+     * Add the newly uploaded gallery views and drop the ones ticked for
+     * removal. The file is deleted only after the row is gone, so a failed
+     * delete leaves an orphaned file rather than a gallery pointing at nothing.
+     */
+    private function syncGallery(Product $product, ProductRequest $request): void
+    {
+        foreach ($request->input('remove_images', []) as $imageId) {
+            // Scoped to this product: a forged id cannot reach another
+            // product's gallery (§17 — never trust a posted identifier).
+            $image = $product->images()->whereKey($imageId)->first();
+
+            if ($image !== null) {
+                $path = $image->path;
+                $image->delete();
+                $this->deleteImage($path);
+            }
+        }
+
+        if (! $request->hasFile('gallery')) {
+            return;
+        }
+
+        $next = (int) $product->images()->max('sort_order');
+
+        foreach ($request->file('gallery') as $file) {
+            try {
+                $path = Storage::disk('uploads')->putFile('products', $file);
+            } catch (FilesystemException $e) {
+                $this->failUpload($e->getMessage());
+            }
+
+            if (! is_string($path) || $path === '') {
+                $this->failUpload('putFile() returned no path for a gallery image.');
+            }
+
+            $product->images()->create(['path' => $path, 'sort_order' => ++$next]);
+        }
     }
 
     private function deleteImage(?string $path): void

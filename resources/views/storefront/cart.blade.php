@@ -2,77 +2,118 @@
 @section('title', 'Cart')
 
 @section('content')
-    <h1 class="h4 mb-3">Your Cart</h1>
+    <ol class="steps">
+        <li class="is-current">Cart</li>
+        <li>Details</li>
+        <li>Payment</li>
+    </ol>
+
+    <h1 class="h3 mb-4">Your cart</h1>
 
     @if ($lines->isEmpty())
-        <p class="text-muted">Your cart is empty.</p>
-        <a href="{{ route('products.index') }}" class="btn btn-shop">Browse products</a>
+        <div class="empty-state">
+            <i class="bi bi-bag" aria-hidden="true"></i>
+            <p class="mb-1">Your cart is empty.</p>
+            <p class="small mb-3">Anything you add is held for this browser session.</p>
+            <a href="{{ route('products.index') }}" class="btn btn-shop">Browse products</a>
+        </div>
     @else
         @if ($lines->contains('reduced', true))
             <div class="alert alert-warning">
+                <i class="bi bi-exclamation-triangle me-1" aria-hidden="true"></i>
                 Some quantities were reduced because stock changed since you added them.
             </div>
         @endif
 
-        <div class="card mb-3">
-            <div class="table-responsive">
-                <table class="table align-middle mb-0">
-                    <thead>
-                    <tr>
-                        <th>Item</th>
-                        <th class="money">Price</th>
-                        <th style="width: 11rem">Qty</th>
-                        <th class="money">Total</th>
-                        <th></th>
-                    </tr>
-                    </thead>
-                    <tbody>
+        <div class="row g-4">
+            <div class="col-lg-8">
+                <div class="panel">
                     @foreach ($lines as $line)
-                        <tr>
-                            <td>
+                        @php $cover = $line->variant->product->coverUrl(); @endphp
+                        <div class="d-flex gap-3 p-3 {{ $loop->last ? '' : 'border-bottom' }}">
+                            @if ($cover)
+                                <img src="{{ $cover }}" alt="" class="line-thumb">
+                            @else
+                                <span class="line-thumb d-flex align-items-center justify-content-center text-muted">
+                                    <i class="bi bi-image" aria-hidden="true"></i>
+                                </span>
+                            @endif
+
+                            <div class="flex-grow-1 min-w-0">
                                 <a href="{{ route('products.show', $line->variant->product) }}"
-                                   class="text-decoration-none">{{ $line->variant->product->name }}</a>
+                                   class="fw-semibold text-decoration-none d-block">
+                                    {{ $line->variant->product->name }}
+                                </a>
                                 @if ($line->variant->variationLabel() !== '')
                                     <div class="text-muted small">{{ $line->variant->variationLabel() }}</div>
                                 @endif
                                 <div class="text-muted small"><code>{{ $line->variant->sku }}</code></div>
-                            </td>
-                            <td class="money"><x-money :minor="$line->unit_price_minor" /></td>
-                            <td>
-                                <form method="POST" action="{{ route('cart.update', $line->variant->id) }}"
-                                      class="d-flex gap-1">
-                                    @csrf @method('PATCH')
-                                    <input type="number" name="qty" min="0" max="{{ $line->stock_qty }}"
-                                           value="{{ $line->qty }}" class="form-control form-control-sm">
-                                    <button class="btn btn-sm btn-outline-secondary">Update</button>
-                                </form>
-                            </td>
-                            <td class="money"><x-money :minor="$line->line_total_minor" /></td>
-                            <td class="text-end">
-                                <form method="POST" action="{{ route('cart.destroy', $line->variant->id) }}">
-                                    @csrf @method('DELETE')
-                                    <button class="btn btn-sm btn-outline-danger">Remove</button>
-                                </form>
-                            </td>
-                        </tr>
+
+                                <div class="d-flex align-items-center gap-2 mt-2 flex-wrap">
+                                    <form method="POST" action="{{ route('cart.update', $line->variant->id) }}"
+                                          class="d-flex align-items-center gap-2">
+                                        @csrf @method('PATCH')
+                                        <div class="qty">
+                                            <button type="button" data-qty-step="-1" aria-label="Decrease quantity">−</button>
+                                            <input type="number" name="qty" min="0" max="{{ $line->stock_qty }}"
+                                                   value="{{ $line->qty }}" aria-label="Quantity">
+                                            <button type="button" data-qty-step="1" aria-label="Increase quantity">+</button>
+                                        </div>
+                                        <button class="btn btn-quiet btn-sm">Update</button>
+                                    </form>
+
+                                    <form method="POST" action="{{ route('cart.destroy', $line->variant->id) }}">
+                                        @csrf @method('DELETE')
+                                        <button class="btn btn-sm btn-link text-danger text-decoration-none px-1">
+                                            Remove
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+
+                            <div class="text-end">
+                                <div class="fw-semibold money"><x-money :minor="$line->line_total_minor" /></div>
+                                <div class="text-muted small money">
+                                    <x-money :minor="$line->unit_price_minor" /> each
+                                </div>
+                            </div>
+                        </div>
                     @endforeach
-                    </tbody>
-                    <tfoot>
-                    <tr>
-                        <th colspan="3" class="text-end">Subtotal</th>
-                        <td class="money fw-semibold"><x-money :minor="$subtotalMinor" /></td>
-                        <td></td>
-                    </tr>
-                    </tfoot>
-                </table>
+                </div>
+
+                <a href="{{ route('products.index') }}" class="btn btn-quiet mt-3">
+                    <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Continue shopping
+                </a>
+            </div>
+
+            <div class="col-lg-4">
+                <div class="panel summary">
+                    <div class="panel__head">Order summary</div>
+                    <div class="panel__body">
+                        <div class="summary-row">
+                            <span>Subtotal</span>
+                            <span><x-money :minor="$subtotalMinor" /></span>
+                        </div>
+                        <div class="summary-row">
+                            <span>Shipping</span>
+                            <span class="text-muted">Calculated at checkout</span>
+                        </div>
+                        <div class="summary-row summary-row--total">
+                            <span>Total so far</span>
+                            <span><x-money :minor="$subtotalMinor" /></span>
+                        </div>
+
+                        <a href="{{ route('checkout.create') }}" class="btn btn-shop w-100 mt-3">
+                            Checkout
+                        </a>
+
+                        <p class="text-muted small text-center mt-3 mb-0">
+                            <i class="bi bi-shield-check me-1" aria-hidden="true"></i>
+                            Prices and stock are re-checked when you place the order.
+                        </p>
+                    </div>
+                </div>
             </div>
         </div>
-
-        <div class="d-flex justify-content-between flex-wrap gap-2">
-            <a href="{{ route('products.index') }}" class="btn btn-outline-secondary">Continue shopping</a>
-            <a href="{{ route('checkout.create') }}" class="btn btn-shop">Checkout</a>
-        </div>
-
-        <p class="text-muted small mt-3 mb-0">Shipping is calculated at checkout.</p>
     @endif
 @endsection

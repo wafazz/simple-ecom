@@ -6,6 +6,7 @@ use App\Models\Category;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
+use App\Models\ProductImage;
 use App\Models\ProductVariant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -214,6 +215,87 @@ class CatalogueTest extends TestCase
             ->assertSessionHasErrors('image');
 
         $this->assertDatabaseMissing('products', ['slug' => 'cap']);
+    }
+
+    #[Test]
+    public function extra_gallery_views_are_stored_alongside_the_cover(): void
+    {
+        Storage::fake('uploads');
+        $category = Category::factory()->create();
+
+        $this->actingAs($this->admin)->post(route('admin.products.store'), $this->productPayload([
+            'category_id' => $category->id,
+            'name' => 'Cap',
+            'image' => UploadedFile::fake()->image('cover.jpg'),
+            'gallery' => [
+                UploadedFile::fake()->image('back.jpg'),
+                UploadedFile::fake()->image('detail.jpg'),
+            ],
+        ], ['sku' => 'CAP-STD']))->assertSessionHasNoErrors();
+
+        $product = Product::where('slug', 'cap')->firstOrFail();
+
+        // The cover keeps its own column — the gallery holds only the extras.
+        $this->assertNotNull($product->image_path);
+        $this->assertCount(2, $product->images);
+        $this->assertSame([1, 2], $product->images->pluck('sort_order')->all());
+    }
+
+    #[Test]
+    public function a_gallery_view_ticked_for_removal_is_deleted_with_its_file(): void
+    {
+        Storage::fake('uploads');
+        $product = Product::factory()->create(['slug' => 'cap']);
+        $variant = ProductVariant::factory()->for($product)->create(['sku' => 'CAP-STD']);
+
+        Storage::disk('uploads')->put('products/gone.jpg', 'x');
+        $image = ProductImage::factory()->for($product)->create(['path' => 'products/gone.jpg']);
+
+        $this->actingAs($this->admin)->put(route('admin.products.update', $product), $this->productPayload([
+            'category_id' => $product->category_id,
+            'name' => $product->name,
+            'remove_images' => [$image->id],
+            // The variant id must travel: without it the form would try to
+            // INSERT a second row carrying the same SKU.
+        ], ['id' => $variant->id, 'sku' => 'CAP-STD']))->assertSessionHasNoErrors();
+
+        $this->assertDatabaseMissing('product_images', ['id' => $image->id]);
+        Storage::disk('uploads')->assertMissing('products/gone.jpg');
+    }
+
+    #[Test]
+    public function a_forged_image_id_cannot_reach_another_products_gallery(): void
+    {
+        // §17 — a posted identifier is never trusted on its own.
+        Storage::fake('uploads');
+        $mine = Product::factory()->create(['slug' => 'mine']);
+        $variant = ProductVariant::factory()->for($mine)->create(['sku' => 'MINE-STD']);
+
+        $theirs = ProductImage::factory()->create();
+
+        $this->actingAs($this->admin)->put(route('admin.products.update', $mine), $this->productPayload([
+            'category_id' => $mine->category_id,
+            'name' => $mine->name,
+            'remove_images' => [$theirs->id],
+        ], ['id' => $variant->id, 'sku' => 'MINE-STD']))->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('product_images', ['id' => $theirs->id]);
+    }
+
+    #[Test]
+    public function a_non_image_in_the_gallery_is_rejected(): void
+    {
+        Storage::fake('uploads');
+        $category = Category::factory()->create();
+
+        // The gallery must not be a looser way in than the cover field.
+        $this->actingAs($this->admin)->post(route('admin.products.store'), $this->productPayload([
+            'category_id' => $category->id,
+            'name' => 'Payload',
+            'gallery' => [UploadedFile::fake()->create('shell.php', 10, 'application/x-php')],
+        ], ['sku' => 'PAY-STD']))->assertSessionHasErrors('gallery.0');
+
+        $this->assertDatabaseMissing('products', ['slug' => 'payload']);
     }
 
     #[Test]
