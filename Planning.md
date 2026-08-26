@@ -389,8 +389,35 @@ Browse
   → Order Confirmation
 ```
 
-**Order status** (§14) — `App\Enums\OrderStatus`, a PHP 8.3 backed string enum cast on the model:
-`pending_payment` · `paid` · `processing` · `shipped` · `completed` · `cancelled` (+ `needs_review`, Planning §11.5).
+**Order status** — `App\Enums\OrderStatus`, a PHP 8.3 backed string enum cast on the model.
+
+**Revised 2026-08-27** to the client's operational vocabulary, superseding the
+spec §14 example list:
+
+`pending` · `new_order` · `processing` · `in_delivery` · `completed` · `returned` · `cancelled`
+
+plus **`needs_review`**, which is **system-set only**. It is the conclusion the
+settlement path reaches when a paid order's stock cannot be allocated
+(Planning §7.5) — not a state an admin picks. It is absent from
+`OrderStatus::selectable()` and rejected by the status-update rule, so it cannot
+be assigned by hand; it IS offered as a list filter, because those orders must
+be findable. An order already in it renders as *"Needs Review (current)"* in the
+dropdown — without that, the select would fall back to its first option and
+saving the form would silently reassign the order to Pending.
+
+`pending`, `cancelled` and `returned` do not count as revenue
+(`OrderStatus::countsAsSale()`). That single definition drives the dashboard, so
+a future report cannot drift from it — a returned order is a reversed sale.
+
+**On payment an order becomes `new_order`, not `processing`**: the gateway
+confirms the money, the admin decides when picking starts.
+
+Existing rows were remapped by a reversible migration — `pending_payment` →
+`pending`, `paid` → `new_order`, `shipped` → `in_delivery` — and the column
+default moved to `pending`. `order_status` is a `VARCHAR`, so this is a data
+change rather than a schema change, but it **must** run: historical rows would
+otherwise hold values the enum can no longer cast, and every read of them would
+throw.
 
 **Payment status** (§14) — `App\Enums\PaymentStatus`, deliberately separate:
 `pending` · `paid` · `failed` · `refunded`.
