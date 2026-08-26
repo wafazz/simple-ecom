@@ -1,12 +1,12 @@
 # Session Memory - Basic Custom E-Commerce
-> Last updated: 2026-08-27 01:30
+> Last updated: 2026-08-27 02:15
 
 ## Session Context
 - **Project**: Basic Custom E-Commerce
 - **Profile**: `~/Desktop/CS/Projects/06-basic-ecom.md`
-- **Branch**: master — Ph2 `43035bf`, Ph3 `23bb05a`, Ph4 `448979a`, Ph5 `4c31125`
+- **Branch**: master — Ph2 `43035bf`, Ph3 `23bb05a`, Ph4 `448979a`, Ph5 `4c31125`, Ph6 `735219d`
 - **Status**: active — Planning.md APPROVED 2026-08-26. Phase 2 complete, Phase 3 next.
-- **Focus**: Phase 6 — session cart, checkout, order creation (spec §27).
+- **Focus**: Phase 7 — ToyyibPay payment (spec §27). **Gated on OQ-11.**
 
 ## Current Tasks
 - [x] Phase 0 Intake — name, work mode, deploy target, database
@@ -18,7 +18,8 @@
 - [x] **Phase 3 — Database**: 10 tables, 4 enums, 10 models, 8 factories, 3 seeders
 - [x] **Phase 4 — Core Laravel MVC**: routes, middleware, controllers, Form Requests, Blade layouts + components, error views, Money support
 - [x] **Phase 5 — Product**: admin CRUD for categories/products/variations + stock, storefront catalogue + detail
-- [ ] **Phase 6 — Cart & Checkout**: session cart, variation selection, customer details, address, order creation
+- [x] **Phase 6 — Cart & Checkout**: CartService, cart screens, CheckoutRequest, order creation + confirmation
+- [ ] **Phase 7 — Payment**: ToyyibPayService, createBill, redirect, return + callback, server-side verification. **BLOCKED on OQ-11**
 - [ ] **OQ-13 blocks Phase 8b** — read `shipment/submit` + `shipment/pay` payloads from `github.com/easyparcel/OpenAPI` and record them. Booking code cannot be written first (§3)
 - [ ] **OQ-03 first** — is EasyParcel on the Open API (OAuth) or legacy Connect (flat key)? Changes Phase 8 design + table count
 - [ ] Verify ToyyibPay `getBillTransactions` field names against the official reference (human, browser)
@@ -93,6 +94,11 @@
 - Scout verified: **Laravel 12 left bug-fix support 2026-08-13**; Laravel 13 is current; local PHP is 8.4.10 so `config.platform.php = "8.3"` is load-bearing; Composer 2.8.10 present; Bootstrap 5.3.8 current.
 - Applied 5 patterns from `11-pattern-library.md`: atomic race-free guard, integer minor units, variants-without-EAV, soft-deletes/unique-index, encrypted secrets at rest.
 
+### Phase 6 corrections
+- Order numbers first used `random_int(1,9999)` — ~50% collision by ~120 orders/day — and the docblock claimed a retry the code never implemented. Now sequential within the day, with the UNIQUE key as the guard and a real retry loop.
+- `CartController::store()` read `qtyFor()` **after** `add()` when deciding whether the quantity was capped, so it always claimed "capped". Now captures the before-value.
+- `app/Services/` did not exist, so the first heredoc write silently produced nothing.
+
 ### Bugs found by tests in Phase 5 (both real, both fixed)
 - `Product::getRouteKeyName()` returns `slug` for pretty storefront URLs, so **every admin product route was binding by slug**. Admin routes now pin `{product:id}` — renaming a product must not change its admin URL.
 - `{variation:id}` turned on Laravel's scoped bindings, which looked for `Product::variations()`; the relation is `variants()`. Route param renamed to `{variant}`.
@@ -112,7 +118,11 @@
 - **101 tests / 237 assertions green on SQLite AND MariaDB 10.4.28.**
 - Live smoke test passed: `/products`, category filter, both seeded products, admin auth-gate, admin catalogue screens after login.
 - Working now: admin category/product/variation CRUD with deactivate-not-delete, stock adjustment (logged), image upload to the `uploads` disk (public/uploads, no storage:link), storefront listing with cheapest-variant price and the per-combination detail table.
-- Next: **Phase 6 — Cart & Checkout.** `CartService` (session, keyed by variant_id), add/update/remove, `CheckoutRequest`, order creation in a transaction with server-side totals and the order_items snapshot.
+- **124 tests / 297 assertions green on SQLite AND MariaDB 10.4.28.**
+- **Live E2E passed**: add 2× T-Shirt M/Black → cart → checkout → `ORD-20260826-0001` created `pending_payment/pending`, 6000+1000=7000, snapshot correct, **stock still 20 (correctly not decremented)**.
+- Working now: session cart (prices always re-read from DB), quantity clamping, checkout with ISO 3166-2:MY state select, server-side totals, order + snapshot, confirmation page.
+- Shipping is the **flat rate from settings** until Phase 8 wires EasyParcel quotations. `orders.shipping_rate_source` is set to `'flat'`.
+- Next: **Phase 7 — Payment.** ToyyibPayService (`createBill`, `getBillTransactions`), redirect, return + callback handlers, server-side verification, guarded paid transition + atomic stock decrement in one transaction. **The service must fail closed and OQ-11 blocks settling a real payment.**
 
 ### Key Context for Next Session
 - **The payment path fails closed on purpose.** If payments don't settle in testing, check `Planning.md` §11.A.6 before assuming a bug.
