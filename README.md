@@ -70,11 +70,11 @@ Full detail in `Planning.md`; these are the ones that cause silent damage if bro
 
 | | |
 |---|---|
-| **OQ-11** | The ToyyibPay `getBillTransactions` response field names are unverified. `ToyyibPayService` **fails closed** — anything it cannot positively recognise leaves the order pending. **Live payments will not settle until a human confirms the field names.** This is deliberate: marking an unpaid order paid is worse than failing to settle a paid one. |
+| ~~OQ-11~~ | ✅ **Closed 2026-08-27** — verified against the official API reference. Field names confirmed, amount format confirmed, callback hash validation implemented. Live payments are no longer blocked. |
 | **OQ-13** | Shipment booking, AWB and tracking (REQ-013) are **not built** — the `shipment/submit` / `shipment/pay` payloads were never verified. Courier *rates* work. |
 
-If payments are not settling, check `storage/logs` for `Payment left UNVERIFIED`
-and its `reason`. That is OQ-11, not a bug.
+If payments are not settling, check `storage/logs` for `Payment left UNVERIFIED` —
+the reason now includes an excerpt of what the gateway actually replied.
 
 ## Deployment
 

@@ -596,16 +596,61 @@ Only the first caller gets `$affected === 1` and proceeds to decrement stock. A 
 
 **Fails closed**: `ToyyibPayService::verifyPayment()` returns `unverified` for any response shape it cannot positively recognise, and the controller leaves such orders **pending**. A wrong guess about a field name would risk false "paid" transitions; refusing to settle is the safer failure.
 
-#### 11.A.6 `NEEDS VERIFICATION`
+#### 11.A.6 ✅ VERIFIED against the official reference — 2026-08-27
 
-- Exact JSON field names in the `getBillTransactions` response (`billpaymentStatus`, `billpaymentAmount`, `billExternalReferenceNo` are *probable*, unconfirmed).
-- Whether `getBillTransactions` requires `userSecretKey` (the mirror lists only `billCode`; SDK usage suggests it is required).
-- Whether the callback is `application/x-www-form-urlencoded`, and whether it retries on a non-200 response.
-- Whether ToyyibPay provides any signature/HMAC on the callback. **Assumed: no** — precisely why §11.A.5 re-queries.
-- Whether `categoryCode` must be created via `createCategory` or in the dashboard.
-- **Operational**: the callback URL must be publicly reachable over HTTPS. On the chosen VPS this is a DNS record + Let's Encrypt certificate.
+**OQ-11 is CLOSED.** The official reference at `https://toyyibpay.com/apireference/`
+returns 403 to the automated fetcher but **200 to a normal browser User-Agent**;
+it was read directly on 2026-08-27. Everything previously marked
+`NEEDS VERIFICATION` is now confirmed, and two of the guesses were wrong.
 
-Response bodies are checked with `json_validate()` (PHP 8.3) before decoding, so a gateway HTML error page becomes a clean `unverified` result rather than a decode warning.
+**`getBillTransactions` response — confirmed field names:**
+
+```json
+[{ "billName": "...", "billDescription": "...", "billTo": "...",
+   "billEmail": "...", "billPhone": "...", "billStatus": "1",
+   "billpaymentStatus": "1", "billpaymentChannel": "FPX",
+   "billpaymentAmount": "10.00", "billpaymentInvoiceNo": "TP57931193991224...",
+   "billpaymentSettlement": "Settlement Done", "billPaymentDate": "...",
+   "billExternalReferenceNo": "WP0001" }]
+```
+
+| Item | Result |
+|---|---|
+| Status field | **`billpaymentStatus`** — `1` success, `2` pending, `3` unsuccessful, `4` pending |
+| Amount field | **`billpaymentAmount`**, a **decimal ringgit string** (`"10.00"` = RM10) |
+| Reference field | **`billExternalReferenceNo`** |
+| Gateway reference | **`billpaymentInvoiceNo`** |
+| Request parameters | **`billCode`** + optional `billpaymentStatus`. **NOT `userSecretKey`** — the code was sending it needlessly |
+| `createBill` `billAmount` | **"The amount is in cent. e.g. 100 = RM1"** — so the outbound path passing `grand_total_minor` straight through was right |
+| Sandbox | "replace the URL `toyyibpay.com` with `dev.toyyibpay.com`" — the mode toggle is correct |
+
+**Two defects the documentation exposed:**
+
+1. **`billName` / `billDescription` accept "alphanumeric characters, space and
+   `_` only".** Order numbers look like `ORD-20260826-0001` — the hyphens are
+   outside that set. Both fields are now sanitised before sending.
+2. **The callback IS signed.** See §11.A.7. Assumption 8 said it was not.
+
+#### 11.A.7 Callback signature — assumption 8 was WRONG
+
+Planning assumption 8 read *"ToyyibPay provides **no** callback signature."*
+That was inferred from silence in the community sources. **The official
+reference documents one, and says it MUST be validated:**
+
+```
+hash = MD5( userSecretKey + status + order_id + refno + "ok" )
+```
+
+Full callback parameters: `refno`, `status`, `reason`, `billcode`, `order_id`,
+`amount`, `transaction_time`, `hash`. (DuitNow QR sends `status_id`, `msg`,
+`transaction_id` and `dnqr_transaction_id` instead of `transaction_time`.)
+
+The hash is now checked **before** anything else happens — a forged callback is
+rejected without even making an outbound request. It does **not** replace the
+server-side re-query of §11.A.5: that remains the actual proof of payment, and
+an unsigned callback still falls through to it rather than being trusted or
+discarded. The signature narrows the attack surface; the re-query is what
+settles the order.
 
 ### 11.B EasyParcel Integration Plan (REQ-006, §13)
 
@@ -1146,7 +1191,7 @@ The client confirmed **MySQL 8.0**, so `DB_CONNECTION=mysql` is correct. Recorde
 | **OQ-08** | **Laravel 12 left bug-fix support 2026-08-13; security fixes end ~2027-02-24 (§0.1).** Who budgets the framework major upgrade, and when? | Long-term cost and security posture |
 | **OQ-09** | **A VPS is a recurring monthly cost (~RM25–60) against a one-off RM1,000 build.** Who pays it, and is it provisioned? | Ongoing cost; blocks Phase 11 |
 | **OQ-10** | Confirm the **asset-pipeline decision** in Planning §5.2 — remove Vite (recommended, no Node) or keep the stock skeleton per §19's folder list. | Build + deploy shape |
-| **OQ-11** | Confirm a human has verified the ToyyibPay items in **Planning §11.A.6** against the official reference. | **Blocks settling any real payment** |
+| ~~**OQ-11**~~ | ✅ **CLOSED 2026-08-27.** The official reference was read directly (403 to the fetcher, 200 to a browser User-Agent). All field names confirmed, the amount format confirmed as decimal ringgit, and two defects fixed — see §11.A.6 and §11.A.7. **Live payments are no longer blocked.** | — |
 | **OQ-12** | **REQ-013: who funds and monitors the EasyParcel credit balance?** Booking debits a prepaid balance. If it runs dry, booking fails for every order until someone tops it up — and top-up is a manual dashboard action, deliberately not built into the app (Planning §11.B.5.7). Who watches it, and should the app warn at a threshold? | **Booking stops working when the balance empties.** Operational, recurring, and outside the RM1,000 build |
 | **OQ-13** | **REQ-013: the booking payloads are unverified** (Planning §11.B.5.1) — `submit`/`pay` request and response shapes, where the AWB appears, tracking mechanism, and whether an idempotency key is supported. A human must read `github.com/easyparcel/OpenAPI` and record them. | **Blocks Phase 8b entirely** |
 | **OQ-14** | **REQ-013: booking trigger.** Planned as an **admin action**, deliberately kept out of the payment callback (Planning §11.B.5.2). Confirm — or state that booking must happen automatically on payment, which is a materially riskier design and needs its own retry/idempotency work. | Design of the booking path |

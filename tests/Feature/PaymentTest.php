@@ -276,6 +276,110 @@ class PaymentTest extends TestCase
     }
 
     #[Test]
+    public function bill_name_and_description_carry_only_characters_the_gateway_accepts(): void
+    {
+        // Official reference: billName is "Max 30 alphanumeric characters,
+        // space and '_' only". Order numbers contain hyphens.
+        $order = $this->order();
+        $order->payment()->delete();
+
+        Http::fake(['*createBill' => Http::response([['BillCode' => 'NEWBILL']], 200)]);
+
+        $this->get(route('payment.pay', $order->order_no));
+
+        Http::assertSent(function ($request) {
+            return preg_match('/^[A-Za-z0-9 _]+$/', $request['billName']) === 1
+                && preg_match('/^[A-Za-z0-9 _]+$/', $request['billDescription']) === 1
+                && ! str_contains($request['billName'], '-')
+                && strlen($request['billName']) <= 30
+                && strlen($request['billDescription']) <= 100;
+        });
+    }
+
+    #[Test]
+    public function get_bill_transactions_is_called_with_the_documented_parameters(): void
+    {
+        // The reference lists billCode and an optional billpaymentStatus.
+        // userSecretKey is not among them.
+        $order = $this->order();
+        $this->fakeVerification($this->paidRow());
+
+        $this->post(route('payment.callback'), ['billcode' => 'BILL123']);
+
+        Http::assertSent(fn ($request) => $request['billCode'] === 'BILL123'
+            && ! isset($request['userSecretKey']));
+    }
+
+    #[Test]
+    public function a_callback_with_a_bad_hash_is_rejected_before_any_gateway_call(): void
+    {
+        // MD5(userSecretKey + status + order_id + refno + "ok"). The reference
+        // says this MUST be validated before processing.
+        $order = $this->order();
+        Http::fake();
+
+        $this->post(route('payment.callback'), [
+            'billcode' => 'BILL123',
+            'status' => '1',
+            'order_id' => $order->order_no,
+            'refno' => 'TP999',
+            'hash' => md5('forged'),
+        ])->assertOk();
+
+        $this->assertSame(PaymentStatus::Pending, $order->fresh()->payment_status);
+        // Rejected outright: no re-query was even attempted.
+        Http::assertNothingSent();
+    }
+
+    #[Test]
+    public function a_callback_with_a_valid_hash_proceeds_to_verification(): void
+    {
+        $order = $this->order();
+        $this->fakeVerification($this->paidRow());
+
+        $hash = md5('test-secret'.'1'.$order->order_no.'TP999'.'ok');
+
+        $this->post(route('payment.callback'), [
+            'billcode' => 'BILL123',
+            'status' => '1',
+            'order_id' => $order->order_no,
+            'refno' => 'TP999',
+            'hash' => $hash,
+        ])->assertOk();
+
+        $this->assertSame(PaymentStatus::Paid, $order->fresh()->payment_status);
+    }
+
+    #[Test]
+    public function an_unsigned_callback_still_falls_through_to_verification(): void
+    {
+        // Older or DuitNow QR callbacks may arrive without a hash. The
+        // server-side re-query is still the actual proof, so an unsigned
+        // callback is verified rather than trusted or discarded.
+        $order = $this->order();
+        $this->fakeVerification($this->paidRow());
+
+        $this->post(route('payment.callback'), ['billcode' => 'BILL123'])->assertOk();
+
+        $this->assertSame(PaymentStatus::Paid, $order->fresh()->payment_status);
+    }
+
+    #[Test]
+    public function the_documented_amount_format_is_decimal_ringgit(): void
+    {
+        // Confirmed 2026-08-27: the reference's sample response shows
+        // "billpaymentAmount": "10.00" for a RM10 payment.
+        $this->assertSame('decimal', config('services.toyyibpay.amount_format'));
+
+        $order = $this->order();
+        $this->fakeVerification($this->paidRow(['billpaymentAmount' => '70.00']));
+
+        $this->post(route('payment.callback'), ['billcode' => 'BILL123'])->assertOk();
+
+        $this->assertSame(PaymentStatus::Paid, $order->fresh()->payment_status);
+    }
+
+    #[Test]
     public function an_already_paid_order_cannot_be_paid_again(): void
     {
         $order = $this->order();

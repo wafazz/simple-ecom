@@ -294,7 +294,7 @@ class IntegrationCredentialTest extends TestCase
         IntegrationConfig::put('toyyibpay.secret_key', 'k');
         IntegrationConfig::put('toyyibpay.category_code', 'c');
 
-        Http::fake(['*getBillTransactions' => Http::response('[FALSE]', 200)]);
+        Http::fake(['*getCategoryDetails' => Http::response('[FALSE]', 200)]);
 
         $this->actingAs($this->admin)
             ->post(route('admin.integrations.test', 'toyyibpay'))
@@ -309,7 +309,7 @@ class IntegrationCredentialTest extends TestCase
         IntegrationConfig::put('toyyibpay.secret_key', 'k');
         IntegrationConfig::put('toyyibpay.category_code', 'c');
 
-        Http::fake(['*getBillTransactions' => Http::response(
+        Http::fake(['*getCategoryDetails' => Http::response(
             "<html><body><h1>502 Bad Gateway</h1>\n<p>nginx</p></body></html>", 200
         )]);
 
@@ -329,7 +329,7 @@ class IntegrationCredentialTest extends TestCase
         IntegrationConfig::put('toyyibpay.secret_key', 'tp-SECRET-KEY-9');
         IntegrationConfig::put('toyyibpay.category_code', 'c');
 
-        Http::fake(['*getBillTransactions' => Http::response('error for key tp-SECRET-KEY-9', 200)]);
+        Http::fake(['*getCategoryDetails' => Http::response('error for key tp-SECRET-KEY-9', 200)]);
 
         $this->actingAs($this->admin)
             ->post(route('admin.integrations.test', 'toyyibpay'));
@@ -410,6 +410,30 @@ class IntegrationCredentialTest extends TestCase
                 && str_contains($r['summary'], 'Not connected'));
 
         Http::assertNothingSent();
+    }
+
+    #[Test]
+    public function the_credential_test_validates_both_keys_via_get_category_details(): void
+    {
+        // getCategoryDetails takes userSecretKey AND categoryCode, so it proves
+        // both are right. A lookup for a bill code that never existed proves
+        // neither.
+        IntegrationConfig::put('toyyibpay.secret_key', 'k');
+        IntegrationConfig::put('toyyibpay.category_code', 'c');
+
+        Http::fake(['*getCategoryDetails' => Http::response([[
+            'categoryName' => 'Storefront',
+            'categoryDescription' => 'Orders',
+            'categoryStatus' => '1',
+        ]], 200)]);
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.integrations.test', 'toyyibpay'))
+            ->assertSessionHas('test_result', fn (array $r): bool => $r['ok']
+                && str_contains($r['endpoint'], 'getCategoryDetails')
+                && str_contains($r['summary'], 'accepted'));
+
+        Http::assertSent(fn ($req) => isset($req['userSecretKey'], $req['categoryCode']));
     }
 
     #[Test]

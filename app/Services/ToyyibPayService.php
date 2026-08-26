@@ -78,8 +78,10 @@ class ToyyibPayService
             'userSecretKey' => $this->secretKey,
             'categoryCode' => $this->categoryCode,
             // Hard gateway limits: 30 and 100 characters.
-            'billName' => mb_substr($order->order_no, 0, 30),
-            'billDescription' => mb_substr($this->describe($order), 0, 100),
+            // "Max 30 alphanumeric characters, space and '_' only" — the
+            // order number contains hyphens, which are NOT in that set.
+            'billName' => $this->sanitiseText($order->order_no, 30),
+            'billDescription' => $this->sanitiseText($this->describe($order), 100),
             'billPriceSetting' => 1,
             'billPayorInfo' => 1,
             'billAmount' => $order->grand_total_minor,
@@ -125,11 +127,19 @@ class ToyyibPayService
             return ['ok' => false, 'summary' => 'No secret key or category code is set.'];
         }
 
+        // getCategoryDetails takes userSecretKey AND categoryCode, so it
+        // actually validates both credentials — unlike a lookup for a bill code
+        // that was never going to exist.
+        $endpoint = $billCode
+            ? $this->endpoint('getBillTransactions')
+            : $this->endpoint('getCategoryDetails');
+
+        $payload = $billCode
+            ? ['billCode' => $billCode]
+            : ['userSecretKey' => $this->secretKey, 'categoryCode' => $this->categoryCode];
+
         try {
-            $response = $this->client()->asForm()->post($this->endpoint('getBillTransactions'), [
-                'userSecretKey' => $this->secretKey,
-                'billCode' => $billCode ?: 'TEST-CONNECTION-PROBE',
-            ]);
+            $response = $this->client()->asForm()->post($endpoint, $payload);
         } catch (\Throwable $e) {
             return ['ok' => false, 'summary' => 'Could not reach the gateway: '.$e->getMessage()];
         }
@@ -140,7 +150,7 @@ class ToyyibPayService
             return [
                 'ok' => false,
                 'summary' => "Gateway replied HTTP {$response->status()}.",
-                'endpoint' => $this->endpoint('getBillTransactions'),
+                'endpoint' => $endpoint,
                 'raw' => $this->redact(trim($response->body())),
             ];
         }
@@ -161,7 +171,7 @@ class ToyyibPayService
                 'summary' => $excerpt === ''
                     ? "Gateway replied HTTP {$response->status()} with an empty body."
                     : "Gateway replied HTTP {$response->status()}, but the body was not JSON.",
-                'endpoint' => $this->endpoint('getBillTransactions'),
+                'endpoint' => $endpoint,
                 'raw' => $excerpt,
                 'note' => $looksLikeMarkup
                     ? 'That is an HTML error or login page, which points at the endpoint or the '
@@ -181,14 +191,57 @@ class ToyyibPayService
         return [
             'ok' => true,
             'summary' => $billCode
-                ? 'Gateway reachable and the response was readable.'
-                : 'Gateway reachable. A dummy bill code was used, so an empty result is expected.',
-            'endpoint' => $this->endpoint('getBillTransactions'),
+                ? 'Bill found and the response was readable.'
+                : 'Secret key and category code accepted by getCategoryDetails.',
+            'endpoint' => $endpoint,
             'fields' => $keys,
-            'note' => 'This confirms reachability and the response shape. It cannot confirm the '
-                .'secret key is correct — only a real transaction can. Supply a genuine bill code '
-                .'to capture the exact field names needed to finish payment verification.',
+            'note' => $billCode
+                ? 'Both credentials and this bill were accepted.'
+                : 'This validates the secret key and category code together. Enter a real bill '
+                    .'code to check a specific payment as well.',
         ];
+    }
+
+    /**
+     * Validates the callback's MD5 hash — `MD5(userSecretKey + status +
+     * order_id + refno + "ok")`, per the official reference, which states this
+     * MUST be checked before processing a payment.
+     *
+     * This does NOT replace the server-side re-query in verifyPayment(); it is
+     * a cheap first gate that rejects a forged callback before any outbound
+     * request is made.
+     */
+    public function callbackHashIsValid(array $callback): bool
+    {
+        $received = (string) ($callback['hash'] ?? '');
+
+        if ($received === '' || ! filled($this->secretKey)) {
+            return false;
+        }
+
+        $expected = md5(
+            $this->secretKey
+            .(string) ($callback['status'] ?? '')
+            .(string) ($callback['order_id'] ?? '')
+            .(string) ($callback['refno'] ?? '')
+            .'ok'
+        );
+
+        return hash_equals($expected, $received);
+    }
+
+    /** Whether a callback even carries a hash to check. */
+    public function callbackIsSigned(array $callback): bool
+    {
+        return filled($callback['hash'] ?? null);
+    }
+
+    /** Alphanumeric, space and underscore only, per the field's documented limits. */
+    private function sanitiseText(string $value, int $limit): string
+    {
+        $clean = preg_replace('/[^A-Za-z0-9 _]/', '_', $value) ?? '';
+
+        return mb_substr(trim($clean), 0, $limit);
     }
 
     public function paymentUrl(string $billCode): string
@@ -207,8 +260,9 @@ class ToyyibPayService
         }
 
         try {
+            // Documented parameters are billCode and an optional
+            // billpaymentStatus. userSecretKey is NOT one of them.
             $response = $this->client()->asForm()->post($this->endpoint('getBillTransactions'), [
-                'userSecretKey' => $this->secretKey,
                 'billCode' => $billCode,
             ]);
         } catch (\Throwable $e) {

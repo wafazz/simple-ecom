@@ -47,10 +47,13 @@ return [
         'connect_timeout' => 5,
         'timeout' => 10,
 
-        // OQ-11: the unit of getBillTransactions' amount field is unconfirmed.
-        // 'decimal' ("10.00" = RM10) is the documented reading. A wrong value
-        // causes an amount MISMATCH, which refuses to settle — it never
-        // silently accepts the wrong figure.
+        // CONFIRMED against the official API reference 2026-08-27: the sample
+        // getBillTransactions response returns "billpaymentAmount": "10.00",
+        // i.e. decimal ringgit. (createBill's billAmount is the other way
+        // round — "the amount is in cent. e.g. 100 = RM1" — which is why the
+        // outbound path passes grand_total_minor straight through.)
+        // Kept configurable as a safety valve; a wrong value causes an amount
+        // MISMATCH that refuses to settle rather than accepting a wrong figure.
         'amount_format' => env('TOYYIBPAY_AMOUNT_FORMAT', 'decimal'),
     ],
 

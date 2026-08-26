@@ -102,6 +102,24 @@ class PaymentController extends Controller
             return response('OK', 200);
         }
 
+        // The official reference states the MD5 hash MUST be validated before
+        // processing. It is a cheap first gate: a forged callback is rejected
+        // here, before any outbound request. The server-side re-query in
+        // settle() remains the actual proof of payment — this narrows the
+        // attack surface, it does not replace it.
+        $callback = $request->all();
+
+        if ($this->toyyibpay->callbackIsSigned($callback)
+            && ! $this->toyyibpay->callbackHashIsValid($callback)) {
+            Log::error('Callback hash mismatch — ignoring', [
+                'order_no' => $order->order_no,
+                'bill_code' => $billCode,
+            ]);
+
+            // Still 200: a retry would deliver the same bad hash.
+            return response('OK', 200);
+        }
+
         $this->settle($order, $billCode, 'callback');
 
         return response('OK', 200);
