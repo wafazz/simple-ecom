@@ -181,6 +181,55 @@ class EasyParcelService
         );
     }
 
+    /**
+     * A live quotation using the store's own pickup origin.
+     *
+     * A real end-to-end check: it exercises the stored credentials, the OAuth
+     * token (refreshing it if needed) and the quotation endpoint.
+     *
+     * @return array<string, mixed>
+     */
+    public function probe(): array
+    {
+        if (! $this->isConfigured()) {
+            return ['ok' => false, 'summary' => 'No client ID or client secret is set.'];
+        }
+
+        if (! $this->isConnected()) {
+            return ['ok' => false, 'summary' => 'Not connected yet — authorise EasyParcel first.'];
+        }
+
+        if ($this->accessToken() === null) {
+            return ['ok' => false, 'summary' => 'The stored token could not be refreshed. Reconnect.'];
+        }
+
+        try {
+            // A fixed, well-known destination so the result depends on the
+            // connection rather than on whatever is in the cart.
+            $quotes = $this->requestQuotations('11900', 'MY-07', 1000);
+        } catch (\Throwable $e) {
+            return ['ok' => false, 'summary' => 'Quotation failed: '.$e->getMessage()];
+        }
+
+        if ($quotes === []) {
+            return [
+                'ok' => false,
+                'summary' => 'Connected, but no couriers were returned for the test route. '
+                    .'Check the pickup origin in Settings.',
+            ];
+        }
+
+        $cheapest = $quotes[0];
+
+        return [
+            'ok' => true,
+            'summary' => count($quotes).' courier option(s) returned for a 1 kg test parcel.',
+            'endpoint' => rtrim($this->baseUrl, '/').'/shipment/quotations',
+            'detail' => 'Cheapest: '.$cheapest->label().' at '
+                .Money::displayGrouped($cheapest->priceMinor, config('shop.currency_symbol')),
+        ];
+    }
+
     // ----------------------------------------------------------- Quotations
 
     /**

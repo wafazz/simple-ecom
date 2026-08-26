@@ -248,6 +248,34 @@ How both hold at once:
 - **Logs record keys only**, never values (spec §24), and the model marks
   `value` as `$hidden` so a stray `toArray()`/`toJson()` cannot leak it.
 
+**Mode toggle (sandbox / production).** Each provider has its own switch, stored
+in `settings` (non-secret, cached) with the `.env` flag as fallback. For
+ToyyibPay this genuinely changes where requests go —
+`dev.toyyibpay.com` vs `toyyibpay.com`, both verified in §11.A.2 — and a test
+asserts the host actually changes rather than just the badge. Switching *into*
+production asks for confirmation, and the change is logged at warning level.
+
+⚠ **EasyParcel's sandbox host is not documented** in anything verified here; the
+published material describes a sandbox reached with developer-portal
+credentials, not a separate base URL. So the toggle records which credential set
+is in use and does not invent a hostname.
+
+**Test connection.** Each provider has a button that makes a real request and
+reports what came back, rather than a green tick:
+
+- **EasyParcel** requests a live quotation from the store's own pickup origin for
+  a 1 kg parcel. That exercises the credentials, the OAuth token (refreshing it
+  if needed) and the quotation endpoint in one go.
+- **ToyyibPay** calls `getBillTransactions` and reports the **field names** in
+  the reply. With a genuine bill code this is the tool that closes **OQ-11** —
+  those names are exactly what payment verification is waiting on. It states
+  plainly that it cannot prove the secret key is correct; only a real
+  transaction can.
+- **Only key names are reported, never values** — the response can carry customer
+  data. A test asserts a name and address in a faked reply never reach the page.
+- Both routes are `throttle:10,1`, because each press is an outbound request to
+  someone else's service.
+
 Residual risk, stated plainly: credentials are now reachable by anyone with
 admin access, where before they required server access. That is a real widening
 of the blast radius and it is the client's decision. The compensating controls

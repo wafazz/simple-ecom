@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\SecureSetting;
+use App\Models\Setting;
 use Illuminate\Database\QueryException;
 
 /**
@@ -46,6 +47,43 @@ final class IntegrationConfig
             self::EDITABLE,
             fn (string $key): bool => str_starts_with($key, $provider.'.')
         ));
+    }
+
+    // ---------------------------------------------------------------- mode
+
+    /**
+     * Sandbox or production, per provider.
+     *
+     * Not a secret, so it lives in `settings` (cached, busted on write) rather
+     * than in secure_settings. Falls back to the .env flag.
+     */
+    public static function mode(string $provider): string
+    {
+        $stored = Setting::get($provider.'_mode');
+
+        if (in_array($stored, ['sandbox', 'production'], true)) {
+            return $stored;
+        }
+
+        return config("services.{$provider}.sandbox") ? 'sandbox' : 'production';
+    }
+
+    public static function isSandbox(string $provider): bool
+    {
+        return self::mode($provider) === 'sandbox';
+    }
+
+    public static function setMode(string $provider, string $mode): void
+    {
+        if (! in_array($provider, self::PROVIDERS, true)) {
+            throw new \InvalidArgumentException("Unknown provider: {$provider}");
+        }
+
+        if (! in_array($mode, ['sandbox', 'production'], true)) {
+            throw new \InvalidArgumentException("Unknown mode: {$mode}");
+        }
+
+        Setting::put($provider.'_mode', $mode);
     }
 
     public static function get(string $key): ?string

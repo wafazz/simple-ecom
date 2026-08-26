@@ -115,6 +115,16 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
             ->name('integrations.credentials');
         Route::delete('/integrations/credentials/{key}', [IntegrationController::class, 'clearCredential'])
             ->where('key', '[a-z_.]+')->name('integrations.credentials.clear');
+
+        Route::patch('/integrations/{provider}/mode', [IntegrationController::class, 'setMode'])
+            ->whereIn('provider', IntegrationConfig::PROVIDERS)
+            ->name('integrations.mode');
+
+        // Throttled: each call is a real outbound request to a third party.
+        Route::post('/integrations/{provider}/test', [IntegrationController::class, 'testConnection'])
+            ->whereIn('provider', IntegrationConfig::PROVIDERS)
+            ->middleware('throttle:10,1')
+            ->name('integrations.test');
         Route::post('/integrations/easyparcel/connect', [IntegrationController::class, 'connect'])->name('integrations.connect');
         Route::get('/integrations/easyparcel/callback', [IntegrationController::class, 'callback'])->name('integrations.callback');
         Route::delete('/integrations/easyparcel', [IntegrationController::class, 'disconnect'])->name('integrations.disconnect');

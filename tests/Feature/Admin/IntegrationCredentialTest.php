@@ -2,13 +2,16 @@
 
 namespace Tests\Feature\Admin;
 
+use App\Models\IntegrationToken;
 use App\Models\SecureSetting;
+use App\Models\Setting;
 use App\Models\User;
 use App\Services\EasyParcelService;
 use App\Services\ToyyibPayService;
 use App\Support\IntegrationConfig;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
@@ -190,6 +193,165 @@ class IntegrationCredentialTest extends TestCase
         }
 
         $this->assertTrue(true);
+    }
+
+    #[Test]
+    public function each_provider_can_be_switched_between_sandbox_and_production(): void
+    {
+        config(['services.toyyibpay.sandbox' => true]);
+
+        $this->assertSame('sandbox', IntegrationConfig::mode('toyyibpay'));
+
+        $this->actingAs($this->admin)
+            ->patch(route('admin.integrations.mode', 'toyyibpay'), ['mode' => 'production'])
+            ->assertRedirect();
+
+        $this->assertSame('production', IntegrationConfig::mode('toyyibpay'));
+        $this->assertFalse(IntegrationConfig::isSandbox('toyyibpay'));
+
+        // The other provider is untouched.
+        $this->assertSame('sandbox', IntegrationConfig::mode('easyparcel'));
+    }
+
+    #[Test]
+    public function the_toyyibpay_mode_selects_the_gateway_host(): void
+    {
+        // Both hosts are verified; switching must actually change where
+        // requests go, not merely relabel a badge.
+        IntegrationConfig::setMode('toyyibpay', 'sandbox');
+        IntegrationConfig::put('toyyibpay.secret_key', 'k');
+        IntegrationConfig::put('toyyibpay.category_code', 'c');
+
+        Http::fake(['*' => Http::response([['BillCode' => 'X']], 200)]);
+        app(ToyyibPayService::class)->probe();
+        Http::assertSent(fn ($r) => str_starts_with($r->url(), 'https://dev.toyyibpay.com'));
+
+        IntegrationConfig::setMode('toyyibpay', 'production');
+        Http::fake(['*' => Http::response([['BillCode' => 'X']], 200)]);
+        app(ToyyibPayService::class)->probe();
+        Http::assertSent(fn ($r) => str_starts_with($r->url(), 'https://toyyibpay.com'));
+    }
+
+    #[Test]
+    public function an_invalid_mode_is_rejected(): void
+    {
+        $this->actingAs($this->admin)
+            ->patch(route('admin.integrations.mode', 'toyyibpay'), ['mode' => 'staging'])
+            ->assertSessionHasErrors('mode');
+    }
+
+    #[Test]
+    public function testing_toyyibpay_reports_the_response_field_names(): void
+    {
+        // This is the point of the button: those names are what payment
+        // verification is waiting on (OQ-11).
+        IntegrationConfig::put('toyyibpay.secret_key', 'k');
+        IntegrationConfig::put('toyyibpay.category_code', 'c');
+
+        Http::fake(['*getBillTransactions' => Http::response([[
+            'billpaymentStatus' => '1',
+            'billpaymentAmount' => '70.00',
+            'billExternalReferenceNo' => 'ORD-1',
+        ]], 200)]);
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.integrations.test', 'toyyibpay'), ['bill_code' => 'abc123'])
+            ->assertRedirect()
+            ->assertSessionHas('test_result', fn (array $r): bool => $r['ok']
+                && in_array('billpaymentStatus', $r['fields'], true)
+                && in_array('billpaymentAmount', $r['fields'], true));
+    }
+
+    #[Test]
+    public function a_connection_test_never_reports_response_values(): void
+    {
+        // The body can carry customer data; only key names may surface.
+        IntegrationConfig::put('toyyibpay.secret_key', 'k');
+        IntegrationConfig::put('toyyibpay.category_code', 'c');
+
+        Http::fake(['*getBillTransactions' => Http::response([[
+            'billpaymentStatus' => '1',
+            'billTo' => 'Aisha Rahman',
+            'billEmail' => 'aisha@example.test',
+        ]], 200)]);
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.integrations.test', 'toyyibpay'), ['bill_code' => 'abc123']);
+
+        $result = session('test_result');
+        $encoded = json_encode($result);
+
+        $this->assertStringNotContainsString('Aisha Rahman', $encoded);
+        $this->assertStringNotContainsString('aisha@example.test', $encoded);
+        $this->assertContains('billTo', $result['fields']);
+    }
+
+    #[Test]
+    public function a_failing_test_says_what_went_wrong(): void
+    {
+        IntegrationConfig::put('toyyibpay.secret_key', 'k');
+        IntegrationConfig::put('toyyibpay.category_code', 'c');
+
+        Http::fake(['*getBillTransactions' => Http::response('<html>502</html>', 200)]);
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.integrations.test', 'toyyibpay'))
+            ->assertSessionHas('test_result', fn (array $r): bool => $r['ok'] === false
+                && str_contains($r['summary'], 'not JSON'));
+    }
+
+    #[Test]
+    public function testing_an_unconfigured_provider_explains_rather_than_erroring(): void
+    {
+        config(['services.toyyibpay.secret_key' => null, 'services.toyyibpay.category_code' => null]);
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.integrations.test', 'toyyibpay'))
+            ->assertRedirect()
+            ->assertSessionHas('test_result', fn (array $r): bool => $r['ok'] === false
+                && str_contains($r['summary'], 'No secret key'));
+    }
+
+    #[Test]
+    public function testing_easyparcel_runs_a_real_quotation(): void
+    {
+        config([
+            'services.easyparcel.client_id' => 'id',
+            'services.easyparcel.client_secret' => 'secret',
+        ]);
+        Setting::put('pickup_postcode', '50000');
+        Setting::put('pickup_state', 'MY-14');
+        IntegrationToken::create([
+            'provider' => 'easyparcel', 'access_token' => 'a', 'refresh_token' => 'r',
+            'expires_at' => now()->addHours(5),
+        ]);
+
+        Http::fake(['*shipment/quotations' => Http::response(['data' => [['quotations' => [[
+            'courier' => ['service_id' => 'S1', 'courier_name' => 'J&T', 'service_name' => 'Standard'],
+            'pricing' => ['total_amount' => '10.84'],
+        ]]]]], 200)]);
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.integrations.test', 'easyparcel'))
+            ->assertSessionHas('test_result', fn (array $r): bool => $r['ok']
+                && str_contains($r['detail'], 'J&T'));
+    }
+
+    #[Test]
+    public function testing_easyparcel_while_disconnected_says_so(): void
+    {
+        config([
+            'services.easyparcel.client_id' => 'id',
+            'services.easyparcel.client_secret' => 'secret',
+        ]);
+        Http::fake();
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.integrations.test', 'easyparcel'))
+            ->assertSessionHas('test_result', fn (array $r): bool => $r['ok'] === false
+                && str_contains($r['summary'], 'Not connected'));
+
+        Http::assertNothingSent();
     }
 
     #[Test]

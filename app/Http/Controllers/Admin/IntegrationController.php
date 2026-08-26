@@ -34,9 +34,9 @@ class IntegrationController extends Controller
             'expiresAt' => $token?->expires_at,
             'connectedAt' => $token?->connected_at,
             'toyyibpayConfigured' => $this->toyyibpay->isConfigured(),
-            'sandbox' => [
-                'toyyibpay' => (bool) config('services.toyyibpay.sandbox'),
-                'easyparcel' => (bool) config('services.easyparcel.sandbox'),
+            'modes' => [
+                'toyyibpay' => IntegrationConfig::mode('toyyibpay'),
+                'easyparcel' => IntegrationConfig::mode('easyparcel'),
             ],
             // Presence, source and a masked hint — never the value itself.
             'credentials' => collect(IntegrationConfig::EDITABLE)
@@ -72,6 +72,52 @@ class IntegrationController extends Controller
         return redirect()
             ->route('admin.integrations.index')
             ->with('status', ucfirst($provider).': '.count($submitted).' credential(s) saved.');
+    }
+
+    /** REQ-011 — switch a provider between sandbox and production. */
+    public function setMode(Request $request, string $provider): RedirectResponse
+    {
+        $mode = $request->validate([
+            'mode' => ['required', 'in:sandbox,production'],
+        ])['mode'];
+
+        IntegrationConfig::setMode($provider, $mode);
+
+        Log::warning('Integration mode changed', [
+            'provider' => $provider,
+            'mode' => $mode,
+            'user_id' => $request->user()?->id,
+        ]);
+
+        return back()->with(
+            'status',
+            $mode === 'production'
+                ? ucfirst($provider).' is now in PRODUCTION mode — real money and real parcels.'
+                : ucfirst($provider).' is now in sandbox mode.'
+        );
+    }
+
+    /**
+     * Runs a live request against the provider and reports what came back.
+     *
+     * Deliberately reports the actual outcome rather than a green tick: for
+     * ToyyibPay it names the response fields, which is what OQ-11 needs.
+     */
+    public function testConnection(Request $request, string $provider): RedirectResponse
+    {
+        $result = match ($provider) {
+            'toyyibpay' => $this->toyyibpay->probe(trim((string) $request->input('bill_code')) ?: null),
+            'easyparcel' => $this->easyparcel->probe(),
+            default => abort(404),
+        };
+
+        Log::info('Integration connection test', [
+            'provider' => $provider,
+            'ok' => $result['ok'],
+            'user_id' => $request->user()?->id,
+        ]);
+
+        return back()->with('test_result', ['provider' => $provider] + $result);
     }
 
     /**

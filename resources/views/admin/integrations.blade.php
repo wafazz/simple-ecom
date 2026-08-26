@@ -29,13 +29,11 @@
         <div class="card h-100">
             <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
                 <h2 class="card-title h6 mb-0"><i class="bi bi-credit-card me-1"></i> ToyyibPay</h2>
-                <span>
+                <span class="d-flex align-items-center gap-2 flex-wrap">
                     <span class="badge text-bg-{{ $toyyibpayConfigured ? 'success' : 'secondary' }}">
                         {{ $toyyibpayConfigured ? 'Configured' : 'Not configured' }}
                     </span>
-                    @if ($sandbox['toyyibpay'])
-                        <span class="badge text-bg-warning">Sandbox</span>
-                    @endif
+                    <x-integration-mode provider="toyyibpay" :mode="$modes['toyyibpay']" />
                 </span>
             </div>
 
@@ -78,7 +76,28 @@
                 </form>
 
                 <hr>
-                <p class="text-muted small mb-0">
+
+                <form method="POST" action="{{ route('admin.integrations.test', 'toyyibpay') }}">
+                    @csrf
+                    <label for="bill_code" class="form-label small mb-1">
+                        Test connection <span class="text-muted">(optional: a real bill code)</span>
+                    </label>
+                    <div class="input-group input-group-sm">
+                        <input type="text" name="bill_code" id="bill_code" placeholder="e.g. abc12345"
+                               class="form-control">
+                        <button type="submit" class="btn btn-outline-primary" @disabled(! $toyyibpayConfigured)>
+                            Test connection
+                        </button>
+                    </div>
+                    <div class="form-text">
+                        Sends a real request. With a genuine bill code it also reports the exact
+                        response field names — which is what payment verification is waiting on.
+                    </div>
+                </form>
+
+                <x-integration-test-result provider="toyyibpay" />
+
+                <p class="text-muted small mt-3 mb-0">
                     Payment verification refuses to settle an order on a response it cannot read.
                     If payments stay pending, check the log before assuming a fault.
                 </p>
@@ -91,16 +110,14 @@
         <div class="card h-100">
             <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
                 <h2 class="card-title h6 mb-0"><i class="bi bi-truck me-1"></i> EasyParcel</h2>
-                <span>
+                <span class="d-flex align-items-center gap-2 flex-wrap">
                     <span class="badge text-bg-{{ $configured ? 'success' : 'secondary' }}">
                         {{ $configured ? 'Configured' : 'Not configured' }}
                     </span>
                     <span class="badge text-bg-{{ $connected ? 'success' : 'warning' }}">
                         {{ $connected ? 'Connected' : 'Not connected' }}
                     </span>
-                    @if ($sandbox['easyparcel'])
-                        <span class="badge text-bg-warning">Sandbox</span>
-                    @endif
+                    <x-integration-mode provider="easyparcel" :mode="$modes['easyparcel']" />
                 </span>
             </div>
 
@@ -162,6 +179,18 @@
                         <button class="btn btn-outline-primary btn-sm" @disabled(! $configured)>Connect EasyParcel</button>
                     </form>
                 @endif
+
+                <form method="POST" action="{{ route('admin.integrations.test', 'easyparcel') }}" class="mt-3">
+                    @csrf
+                    <button type="submit" class="btn btn-sm btn-outline-primary" @disabled(! $connected)>
+                        Test connection
+                    </button>
+                    <div class="form-text">
+                        Requests a live quotation from your pickup origin for a 1 kg parcel.
+                    </div>
+                </form>
+
+                <x-integration-test-result provider="easyparcel" />
             </div>
         </div>
     </div>

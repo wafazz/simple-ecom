@@ -45,7 +45,11 @@ class ToyyibPayService
     public static function fromConfig(): self
     {
         return new self(
-            (string) config('services.toyyibpay.base_url'),
+            // Both hosts are verified (Planning §11.A.2); the admin toggle
+            // selects between them.
+            IntegrationConfig::isSandbox('toyyibpay')
+                ? 'https://dev.toyyibpay.com'
+                : 'https://toyyibpay.com',
             // Admin-set value wins over .env (Planning §5.4).
             IntegrationConfig::get('toyyibpay.secret_key'),
             IntegrationConfig::get('toyyibpay.category_code'),
@@ -102,6 +106,64 @@ class ToyyibPayService
         Log::info('ToyyibPay bill created', ['order_no' => $order->order_no, 'bill_code' => $billCode]);
 
         return $billCode;
+    }
+
+    /**
+     * A live round trip against the configured credentials.
+     *
+     * Reports the response SHAPE, not a green tick. It cannot prove the secret
+     * key is correct without a real transaction — and it says so — but it does
+     * prove the endpoint is reachable, the credentials are accepted well enough
+     * to get a reply, and, crucially, WHICH FIELD NAMES come back. That last
+     * part is what OQ-11 needs to close (Planning §11.A.6).
+     *
+     * @return array<string, mixed>
+     */
+    public function probe(?string $billCode = null): array
+    {
+        if (! $this->isConfigured()) {
+            return ['ok' => false, 'summary' => 'No secret key or category code is set.'];
+        }
+
+        try {
+            $response = $this->client()->asForm()->post($this->endpoint('getBillTransactions'), [
+                'userSecretKey' => $this->secretKey,
+                'billCode' => $billCode ?: 'TEST-CONNECTION-PROBE',
+            ]);
+        } catch (\Throwable $e) {
+            return ['ok' => false, 'summary' => 'Could not reach the gateway: '.$e->getMessage()];
+        }
+
+        $body = $response->body();
+
+        if (! $response->successful()) {
+            return ['ok' => false, 'summary' => "Gateway replied HTTP {$response->status()}."];
+        }
+
+        if (! json_validate($body)) {
+            return [
+                'ok' => false,
+                'summary' => 'Gateway replied, but the body was not JSON — usually an error page.',
+            ];
+        }
+
+        $decoded = json_decode($body, true);
+        $row = is_array($decoded) ? ($decoded[0] ?? $decoded) : [];
+        // KEY NAMES only. The body can carry customer data, so no values leave
+        // this method.
+        $keys = is_array($row) ? array_keys($row) : [];
+
+        return [
+            'ok' => true,
+            'summary' => $billCode
+                ? 'Gateway reachable and the response was readable.'
+                : 'Gateway reachable. A dummy bill code was used, so an empty result is expected.',
+            'endpoint' => $this->endpoint('getBillTransactions'),
+            'fields' => $keys,
+            'note' => 'This confirms reachability and the response shape. It cannot confirm the '
+                .'secret key is correct — only a real transaction can. Supply a genuine bill code '
+                .'to capture the exact field names needed to finish payment verification.',
+        ];
     }
 
     public function paymentUrl(string $billCode): string
