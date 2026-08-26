@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Models\Setting;
 use App\Services\CartService;
+use App\Services\EasyParcelService;
 use App\Services\ToyyibPayService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\URL;
@@ -25,6 +26,7 @@ class AppServiceProvider extends ServiceProvider
         // Bound explicitly: the constructor takes plain strings from config,
         // which the container cannot autowire.
         $this->app->bind(ToyyibPayService::class, fn () => ToyyibPayService::fromConfig());
+        $this->app->bind(EasyParcelService::class, fn () => EasyParcelService::fromConfig());
     }
 
     /**

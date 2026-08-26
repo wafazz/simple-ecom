@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\IntegrationController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\VariationController;
 use App\Http\Controllers\CartController;
@@ -11,6 +12,7 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\OrderStatusController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\ShippingController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -30,6 +32,9 @@ Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
 Route::post('/cart', [CartController::class, 'store'])->name('cart.store');
 Route::patch('/cart/{variant}', [CartController::class, 'update'])->name('cart.update');
 Route::delete('/cart/{variant}', [CartController::class, 'destroy'])->name('cart.destroy');
+
+// Shipping rates (REQ-006) — AJAX from the checkout page.
+Route::post('/shipping/quote', [ShippingController::class, 'quote'])->name('shipping.quote');
 
 // Checkout (REQ-004)
 Route::get('/checkout', [CheckoutController::class, 'create'])->name('checkout.create');
@@ -81,6 +86,12 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
         Route::get('/products/{product:id}/edit', [AdminProductController::class, 'edit'])->name('products.edit');
         Route::put('/products/{product:id}', [AdminProductController::class, 'update'])->name('products.update');
         Route::patch('/products/{product:id}/toggle', [AdminProductController::class, 'toggle'])->name('products.toggle');
+
+        // EasyParcel connection (REQ-006)
+        Route::get('/integrations', [IntegrationController::class, 'index'])->name('integrations.index');
+        Route::post('/integrations/easyparcel/connect', [IntegrationController::class, 'connect'])->name('integrations.connect');
+        Route::get('/integrations/easyparcel/callback', [IntegrationController::class, 'callback'])->name('integrations.callback');
+        Route::delete('/integrations/easyparcel', [IntegrationController::class, 'disconnect'])->name('integrations.disconnect');
 
         // Variations + stock (REQ-002, REQ-008)
         // The param is {variant}, not {variation}: a custom key turns on scoped

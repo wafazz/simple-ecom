@@ -65,6 +65,10 @@ return [
         'oauth_url' => 'https://api.easyparcel.com/oauth',
         'connect_timeout' => 5,
         'timeout' => 10,
+
+        // OQ-13: the published request shape names `weight` but not its unit.
+        // kg is the EasyParcel convention; switchable once a live call confirms.
+        'weight_unit' => env('EASYPARCEL_WEIGHT_UNIT', 'kg'),
     ],
 
 ];

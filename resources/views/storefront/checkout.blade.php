@@ -107,18 +107,44 @@
                             <tfoot>
                             <tr>
                                 <th class="text-end">Subtotal</th>
-                                <td class="money"><x-money :minor="$subtotalMinor" /></td>
+                                <td class="money" data-subtotal="{{ $subtotalMinor }}"><x-money :minor="$subtotalMinor" /></td>
                             </tr>
                             <tr>
                                 <th class="text-end">Shipping</th>
-                                <td class="money"><x-money :minor="$shippingFeeMinor" /></td>
+                                <td class="money" id="shipping-total"><x-money :minor="$fallbackQuote->priceMinor" /></td>
                             </tr>
                             <tr>
                                 <th class="text-end">Total</th>
-                                <td class="money fw-semibold"><x-money :minor="$grandTotalMinor" /></td>
+                                <td class="money fw-semibold" id="grand-total">
+                                    <x-money :minor="$subtotalMinor + $fallbackQuote->priceMinor" />
+                                </td>
                             </tr>
                             </tfoot>
                         </table>
+
+                        <hr>
+
+                        <h3 class="h6">Delivery</h3>
+                        <button type="button" id="get-rates" class="btn btn-outline-secondary btn-sm mb-2">
+                            Get courier rates
+                        </button>
+                        <p class="text-muted small" id="rates-hint">
+                            Enter your postcode and state, then check rates.
+                        </p>
+
+                        <div id="rate-options">
+                            {{-- Always one selectable option so an order can be
+                                 placed even when the rate API is unreachable. --}}
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="shipping_service_id"
+                                       id="rate-flat" value="{{ $fallbackQuote->serviceId }}"
+                                       data-price="{{ $fallbackQuote->priceMinor }}" checked>
+                                <label class="form-check-label" for="rate-flat">
+                                    {{ $fallbackQuote->label() }} —
+                                    <x-money :minor="$fallbackQuote->priceMinor" />
+                                </label>
+                            </div>
+                        </div>
 
                         <button type="submit" class="btn btn-shop w-100">Place order &amp; pay</button>
 
@@ -132,3 +158,86 @@
         </div>
     </form>
 @endsection
+
+@push('scripts')
+<script>
+// Fetches courier rates for the entered address. The chosen service_id is an
+// identifier only — the server re-quotes and prices it again on submit, so
+// nothing here can influence what is charged.
+(function () {
+    var btn = document.getElementById('get-rates');
+    if (!btn) return;
+
+    var options = document.getElementById('rate-options');
+    var hint = document.getElementById('rates-hint');
+    var subtotal = parseInt(document.querySelector('[data-subtotal]').dataset.subtotal, 10);
+
+    function money(minor) {
+        var sign = minor < 0 ? '-' : '';
+        minor = Math.abs(minor);
+        return sign + '{{ config('shop.currency_symbol') }}' +
+            Math.floor(minor / 100) + '.' + String(minor % 100).padStart(2, '0');
+    }
+
+    function recalc() {
+        var picked = options.querySelector('input[name="shipping_service_id"]:checked');
+        var ship = picked ? parseInt(picked.dataset.price, 10) : 0;
+        document.getElementById('shipping-total').textContent = money(ship);
+        document.getElementById('grand-total').textContent = money(subtotal + ship);
+    }
+
+    options.addEventListener('change', recalc);
+
+    btn.addEventListener('click', function () {
+        var postcode = document.getElementById('postcode').value;
+        var state = document.getElementById('state').value;
+
+        if (!postcode || !state) {
+            hint.textContent = 'Enter your postcode and state first.';
+            return;
+        }
+
+        btn.disabled = true;
+        hint.textContent = 'Checking rates…';
+
+        fetch('{{ route('shipping.quote') }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: JSON.stringify({ postcode: postcode, state: state })
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            var quotes = data.quotes || [];
+            if (!quotes.length) { hint.textContent = 'No rates available; a flat rate applies.'; return; }
+
+            options.innerHTML = '';
+            quotes.forEach(function (q, i) {
+                var id = 'rate-' + i;
+                var div = document.createElement('div');
+                div.className = 'form-check';
+                div.innerHTML = '<input class="form-check-input" type="radio" name="shipping_service_id"' +
+                    ' id="' + id + '" value="' + q.service_id + '" data-price="' + q.price_minor + '"' +
+                    (i === 0 ? ' checked' : '') + '>' +
+                    '<label class="form-check-label" for="' + id + '">' +
+                    q.label + ' — ' + q.price +
+                    (q.delivery_duration ? ' <span class="text-muted small">(' + q.delivery_duration + ')</span>' : '') +
+                    (q.is_flat ? ' <span class="badge text-bg-secondary">flat rate</span>' : '') +
+                    '</label>';
+                options.appendChild(div);
+            });
+
+            hint.textContent = quotes[0].is_flat
+                ? 'Live rates unavailable — a flat rate applies.'
+                : 'Choose a delivery option.';
+            recalc();
+        })
+        .catch(function () { hint.textContent = 'Could not fetch rates; a flat rate applies.'; })
+        .finally(function () { btn.disabled = false; });
+    });
+})();
+</script>
+@endpush

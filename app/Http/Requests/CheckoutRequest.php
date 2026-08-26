@@ -33,6 +33,10 @@ class CheckoutRequest extends FormRequest
             'state' => ['required', 'string', Rule::in(array_keys(config('shop.states')))],
             'postcode' => ['required', 'string', 'regex:/^\d{5}$/'],
             'country' => ['required', 'string', 'size:2'],
+
+            // An IDENTIFIER only. The fee is re-quoted server-side and the
+            // posted price, if any, is ignored entirely (Planning §11.B.4).
+            'shipping_service_id' => ['nullable', 'string', 'max:100'],
         ];
     }
 
