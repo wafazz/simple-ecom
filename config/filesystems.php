@@ -38,6 +38,16 @@ return [
             'report' => false,
         ],
 
+        // Product images. Written straight into public/uploads so no
+        // storage:link symlink is needed on the VPS (Planning §12.2).
+        'uploads' => [
+            'driver' => 'local',
+            'root' => public_path('uploads'),
+            'url' => env('APP_URL').'/uploads',
+            'visibility' => 'public',
+            'throw' => false,
+        ],
+
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),

@@ -20,7 +20,15 @@
                     <a class="nav-link {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}"
                        href="{{ route('admin.dashboard') }}">Dashboard</a>
                 </li>
-                {{-- Catalogue, orders, shipments and settings land in Phases 5–9. --}}
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('admin.categories.*') ? 'active' : '' }}"
+                       href="{{ route('admin.categories.index') }}">Categories</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('admin.products.*') ? 'active' : '' }}"
+                       href="{{ route('admin.products.index') }}">Products</a>
+                </li>
+                {{-- Orders, shipments and settings land in Phases 6–9. --}}
             </ul>
             <form method="POST" action="{{ route('admin.logout') }}" class="mt-4">
                 @csrf

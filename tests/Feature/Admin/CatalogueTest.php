@@ -1,0 +1,147 @@
+<?php
+
+namespace Tests\Feature\Admin;
+
+use App\Models\Category;
+use App\Models\Order;
+use App\Models\OrderItem;
+use App\Models\Product;
+use App\Models\ProductVariant;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
+use PHPUnit\Framework\Attributes\Test;
+use Tests\TestCase;
+
+/** REQ-001 / REQ-002 / REQ-008 */
+class CatalogueTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private User $admin;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->admin = User::factory()->create();
+    }
+
+    #[Test]
+    public function a_guest_cannot_reach_any_catalogue_screen(): void
+    {
+        $category = Category::factory()->create();
+        $product = Product::factory()->create();
+
+        $this->get(route('admin.categories.index'))->assertRedirect(route('admin.login'));
+        $this->get(route('admin.products.index'))->assertRedirect(route('admin.login'));
+        $this->get(route('admin.products.variations.index', $product))->assertRedirect(route('admin.login'));
+        $this->post(route('admin.categories.store'), ['name' => 'X'])->assertRedirect(route('admin.login'));
+        $this->patch(route('admin.categories.toggle', $category))->assertRedirect(route('admin.login'));
+
+        $this->assertDatabaseMissing('categories', ['name' => 'X']);
+    }
+
+    #[Test]
+    public function a_category_slug_is_generated_from_the_name(): void
+    {
+        $this->actingAs($this->admin)
+            ->post(route('admin.categories.store'), ['name' => 'Baju Melayu & Kurta'])
+            ->assertRedirect(route('admin.categories.index'));
+
+        $this->assertDatabaseHas('categories', ['slug' => 'baju-melayu-kurta']);
+    }
+
+    #[Test]
+    public function duplicate_category_slugs_are_rejected_with_a_field_error(): void
+    {
+        Category::factory()->create(['slug' => 'apparel']);
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.categories.store'), ['name' => 'Apparel'])
+            ->assertSessionHasErrors('slug');
+
+        $this->assertSame(1, Category::count());
+    }
+
+    #[Test]
+    public function a_category_can_keep_its_own_slug_when_edited(): void
+    {
+        $category = Category::factory()->create(['name' => 'Apparel', 'slug' => 'apparel']);
+
+        $this->actingAs($this->admin)
+            ->put(route('admin.categories.update', $category), ['name' => 'Apparel', 'slug' => 'apparel'])
+            ->assertSessionHasNoErrors();
+    }
+
+    #[Test]
+    public function deactivating_a_product_keeps_its_order_history_intact(): void
+    {
+        // The reason deactivate exists instead of delete (Planning §12.4).
+        $variant = ProductVariant::factory()->create();
+        $order = Order::factory()->create();
+        OrderItem::factory()->for($order)->create([
+            'product_variant_id' => $variant->id,
+            'product_name' => 'T-Shirt',
+        ]);
+
+        $this->actingAs($this->admin)
+            ->patch(route('admin.products.toggle', $variant->product_id))
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('products', ['id' => $variant->product_id, 'is_active' => false]);
+        $this->assertDatabaseHas('order_items', ['order_id' => $order->id, 'product_name' => 'T-Shirt']);
+    }
+
+    #[Test]
+    public function a_new_product_sends_the_admin_straight_to_variations(): void
+    {
+        // A product with no variants cannot be sold, so the flow must not stop
+        // at "product created".
+        $category = Category::factory()->create();
+
+        $response = $this->actingAs($this->admin)->post(route('admin.products.store'), [
+            'category_id' => $category->id,
+            'name' => 'Hoodie',
+        ]);
+
+        $product = Product::where('slug', 'hoodie')->firstOrFail();
+        $response->assertRedirect(route('admin.products.variations.index', $product));
+    }
+
+    #[Test]
+    public function an_uploaded_image_is_stored_under_a_generated_name(): void
+    {
+        Storage::fake('uploads');
+        $category = Category::factory()->create();
+
+        $this->actingAs($this->admin)->post(route('admin.products.store'), [
+            'category_id' => $category->id,
+            'name' => 'Cap',
+            'image' => UploadedFile::fake()->image('../../evil name.jpg'),
+        ]);
+
+        $path = Product::where('slug', 'cap')->firstOrFail()->image_path;
+
+        $this->assertNotNull($path);
+        // The client's filename must not survive into the stored path.
+        $this->assertStringNotContainsString('evil', $path);
+        $this->assertStringNotContainsString('..', $path);
+        Storage::disk('uploads')->assertExists($path);
+    }
+
+    #[Test]
+    public function a_non_image_upload_is_rejected(): void
+    {
+        Storage::fake('uploads');
+        $category = Category::factory()->create();
+
+        $this->actingAs($this->admin)->post(route('admin.products.store'), [
+            'category_id' => $category->id,
+            'name' => 'Payload',
+            'image' => UploadedFile::fake()->create('shell.php', 10, 'application/x-php'),
+        ])->assertSessionHasErrors('image');
+
+        $this->assertDatabaseMissing('products', ['slug' => 'payload']);
+    }
+}

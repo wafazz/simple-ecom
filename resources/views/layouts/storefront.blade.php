@@ -20,6 +20,7 @@
         <div class="collapse navbar-collapse" id="nav">
             <ul class="navbar-nav me-auto">
                 <li class="nav-item"><a class="nav-link" href="{{ route('home') }}">Home</a></li>
+                <li class="nav-item"><a class="nav-link" href="{{ route('products.index') }}">Products</a></li>
             </ul>
             <ul class="navbar-nav">
                 <li class="nav-item"><a class="nav-link" href="{{ route('order-status.show') }}">Track Order</a></li>
