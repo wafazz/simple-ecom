@@ -29,7 +29,7 @@ class OrderFactory extends Factory
             'courier_name' => 'Test Courier',
             'courier_service_id' => 'SVC-TEST',
             'shipping_rate_source' => 'api',
-            'order_status' => OrderStatus::PendingPayment,
+            'order_status' => OrderStatus::Pending,
             'payment_status' => PaymentStatus::Pending,
         ];
     }
@@ -38,7 +38,7 @@ class OrderFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'payment_status' => PaymentStatus::Paid,
-            'order_status' => OrderStatus::Processing,
+            'order_status' => OrderStatus::NewOrder,
         ]);
     }
 

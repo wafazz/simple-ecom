@@ -6,11 +6,13 @@
 
     $variant = match ($value) {
         'paid', 'completed', 'delivered', 'booked' => 'success',
-        'pending', 'pending_payment', 'pending_submit', 'submitting', 'submitted' => 'secondary',
-        'processing', 'shipped', 'in_transit' => 'info',
+        // A new order is the one that needs someone to act on it.
+        'new_order' => 'primary',
+        'pending', 'pending_submit', 'submitting', 'submitted' => 'secondary',
+        'processing', 'in_delivery', 'in_transit' => 'info',
         'failed', 'cancelled' => 'danger',
         'needs_review', 'needs_reconciliation' => 'warning',
-        'refunded' => 'dark',
+        'returned', 'refunded' => 'dark',
         default => 'secondary',
     };
 @endphp

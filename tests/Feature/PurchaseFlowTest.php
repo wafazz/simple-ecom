@@ -143,7 +143,7 @@ class PurchaseFlowTest extends TestCase
         // 7. Settled: statuses moved and stock decremented exactly once.
         $order->refresh();
         $this->assertSame(PaymentStatus::Paid, $order->payment_status);
-        $this->assertSame(OrderStatus::Processing, $order->order_status);
+        $this->assertSame(OrderStatus::NewOrder, $order->order_status);
         $this->assertSame(18, $this->black->fresh()->stock_qty);
         $this->assertSame(4, $this->white->fresh()->stock_qty);
         $this->assertSame('INV-E2E', $order->payment->provider_ref);

@@ -81,7 +81,7 @@ class CheckoutController extends Controller
                 'subtotal_minor' => $subtotalMinor,
                 'shipping_fee_minor' => $shippingFeeMinor,
                 'grand_total_minor' => $grandTotalMinor,
-                'order_status' => OrderStatus::PendingPayment,
+                'order_status' => OrderStatus::Pending,
                 'payment_status' => PaymentStatus::Pending,
                 'courier_name' => $quote->label(),
                 'courier_service_id' => $quote->serviceId,

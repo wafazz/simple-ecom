@@ -85,7 +85,7 @@ class PaymentTest extends TestCase
 
         $order->refresh();
         $this->assertSame(PaymentStatus::Paid, $order->payment_status);
-        $this->assertSame(OrderStatus::Processing, $order->order_status);
+        $this->assertSame(OrderStatus::NewOrder, $order->order_status);
         $this->assertSame(8, ProductVariant::first()->stock_qty);
         $this->assertSame('INV-999', $order->payment->provider_ref);
     }

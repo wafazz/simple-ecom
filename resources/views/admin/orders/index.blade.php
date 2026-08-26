@@ -21,6 +21,8 @@
         <div class="col-md-3">
             <select name="order_status" class="form-select form-select-sm">
                 <option value="">Any order status</option>
+                {{-- Every case, including needs_review: an admin must be able to
+                     FILTER for it even though they cannot assign it. --}}
                 @foreach (\App\Enums\OrderStatus::cases() as $case)
                     <option value="{{ $case->value }}" @selected(($filters['order_status'] ?? '') === $case->value)>
                         {{ $case->label() }}

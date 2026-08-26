@@ -35,7 +35,7 @@ class OrderAdminTest extends TestCase
         $this->patch(route('admin.orders.status', $order), ['order_status' => 'shipped'])
             ->assertRedirect(route('admin.login'));
 
-        $this->assertSame(OrderStatus::PendingPayment, $order->fresh()->order_status);
+        $this->assertSame(OrderStatus::Pending, $order->fresh()->order_status);
     }
 
     #[Test]
@@ -97,10 +97,10 @@ class OrderAdminTest extends TestCase
         $order = Order::factory()->paid()->create();
 
         $this->actingAs($this->admin)
-            ->patch(route('admin.orders.status', $order), ['order_status' => OrderStatus::Shipped->value])
+            ->patch(route('admin.orders.status', $order), ['order_status' => OrderStatus::InDelivery->value])
             ->assertRedirect();
 
-        $this->assertSame(OrderStatus::Shipped, $order->fresh()->order_status);
+        $this->assertSame(OrderStatus::InDelivery, $order->fresh()->order_status);
     }
 
     #[Test]
@@ -112,7 +112,7 @@ class OrderAdminTest extends TestCase
             ->patch(route('admin.orders.status', $order), ['order_status' => 'teleported'])
             ->assertSessionHasErrors('order_status');
 
-        $this->assertSame(OrderStatus::PendingPayment, $order->fresh()->order_status);
+        $this->assertSame(OrderStatus::Pending, $order->fresh()->order_status);
     }
 
     #[Test]
@@ -129,6 +129,74 @@ class OrderAdminTest extends TestCase
         ])->assertRedirect();
 
         $this->assertSame(PaymentStatus::Pending, $order->fresh()->payment_status);
+    }
+
+    #[Test]
+    public function the_status_dropdown_offers_exactly_the_operational_statuses(): void
+    {
+        $order = Order::factory()->create();
+        OrderItem::factory()->for($order)->create();
+
+        $response = $this->actingAs($this->admin)->get(route('admin.orders.show', $order))->assertOk();
+
+        foreach (['Pending', 'New Order', 'Processing', 'In Delivery', 'Completed', 'Returned', 'Cancelled'] as $label) {
+            $response->assertSee($label);
+        }
+    }
+
+    #[Test]
+    public function needs_review_cannot_be_assigned_by_hand(): void
+    {
+        // It is a conclusion the system reaches when paid stock cannot be
+        // allocated — not a state an admin picks.
+        $order = Order::factory()->paid()->create();
+
+        $this->actingAs($this->admin)
+            ->patch(route('admin.orders.status', $order), ['order_status' => OrderStatus::NeedsReview->value])
+            ->assertSessionHasErrors('order_status');
+
+        $this->assertSame(OrderStatus::NewOrder, $order->fresh()->order_status);
+    }
+
+    #[Test]
+    public function an_order_already_in_needs_review_keeps_it_as_the_selected_option(): void
+    {
+        // Without this the dropdown would default to the first option, and
+        // saving the form would silently reassign the order to Pending.
+        $order = Order::factory()->paid()->create();
+        $order->forceFill(['order_status' => OrderStatus::NeedsReview])->save();
+        OrderItem::factory()->for($order)->create();
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.orders.show', $order))
+            ->assertOk()
+            ->assertSee('Needs Review (current)');
+    }
+
+    #[Test]
+    public function an_order_can_be_moved_through_the_full_fulfilment_path(): void
+    {
+        $order = Order::factory()->paid()->create();
+
+        foreach ([OrderStatus::Processing, OrderStatus::InDelivery, OrderStatus::Completed] as $next) {
+            $this->actingAs($this->admin)
+                ->patch(route('admin.orders.status', $order), ['order_status' => $next->value])
+                ->assertRedirect();
+
+            $this->assertSame($next, $order->fresh()->order_status);
+        }
+    }
+
+    #[Test]
+    public function an_order_can_be_marked_returned(): void
+    {
+        $order = Order::factory()->paid()->create();
+
+        $this->actingAs($this->admin)
+            ->patch(route('admin.orders.status', $order), ['order_status' => OrderStatus::Returned->value])
+            ->assertRedirect();
+
+        $this->assertSame(OrderStatus::Returned, $order->fresh()->order_status);
     }
 
     #[Test]

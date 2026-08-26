@@ -47,12 +47,23 @@ class DashboardTest extends TestCase
         // The tile literally says "excl. pending & cancelled" — it must be true.
         $this->order(OrderStatus::Processing, PaymentStatus::Paid, 10000);
         $this->order(OrderStatus::Completed, PaymentStatus::Paid, 5000);
-        $this->order(OrderStatus::PendingPayment, PaymentStatus::Pending, 99999);
+        $this->order(OrderStatus::Pending, PaymentStatus::Pending, 99999);
         $this->order(OrderStatus::Cancelled, PaymentStatus::Failed, 88888);
 
         $this->actingAs($this->admin)->get(route('admin.dashboard'))
             ->assertOk()
             ->assertViewHas('totalSalesMinor', 15000);
+    }
+
+    #[Test]
+    public function a_returned_order_is_not_revenue(): void
+    {
+        $this->order(OrderStatus::Completed, PaymentStatus::Paid, 10000);
+        $this->order(OrderStatus::Returned, PaymentStatus::Paid, 30000);
+
+        $this->actingAs($this->admin)->get(route('admin.dashboard'))
+            ->assertOk()
+            ->assertViewHas('totalSalesMinor', 10000);
     }
 
     #[Test]
@@ -70,7 +81,7 @@ class DashboardTest extends TestCase
     {
         $this->order(OrderStatus::Processing, PaymentStatus::Paid, 10000);
         $this->order(OrderStatus::Processing, PaymentStatus::Pending, 60000);
-        $this->order(OrderStatus::Shipped, PaymentStatus::Refunded, 30000);
+        $this->order(OrderStatus::InDelivery, PaymentStatus::Refunded, 30000);
 
         $response = $this->actingAs($this->admin)->get(route('admin.dashboard'));
 
@@ -85,7 +96,7 @@ class DashboardTest extends TestCase
         $this->order(OrderStatus::Completed, PaymentStatus::Paid, 10000);
         $this->order(OrderStatus::Completed, PaymentStatus::Paid, 20000);
         // Neither of these is a sale, so neither may move the average.
-        $this->order(OrderStatus::PendingPayment, PaymentStatus::Pending, 999999);
+        $this->order(OrderStatus::Pending, PaymentStatus::Pending, 999999);
         $this->order(OrderStatus::Cancelled, PaymentStatus::Failed, 999999);
 
         $this->actingAs($this->admin)->get(route('admin.dashboard'))
@@ -98,7 +109,7 @@ class DashboardTest extends TestCase
     public function average_order_value_is_undefined_rather_than_zero_with_no_sales(): void
     {
         // An average of nothing is not RM 0.00.
-        $this->order(OrderStatus::PendingPayment, PaymentStatus::Pending, 5000);
+        $this->order(OrderStatus::Pending, PaymentStatus::Pending, 5000);
 
         $this->actingAs($this->admin)->get(route('admin.dashboard'))
             ->assertOk()
@@ -112,8 +123,8 @@ class DashboardTest extends TestCase
         foreach (range(1, 8) as $i) {
             $this->order(OrderStatus::Completed, PaymentStatus::Paid, 1000);
         }
-        $this->order(OrderStatus::PendingPayment, PaymentStatus::Pending, 1000);
-        $this->order(OrderStatus::PendingPayment, PaymentStatus::Pending, 1000);
+        $this->order(OrderStatus::Pending, PaymentStatus::Pending, 1000);
+        $this->order(OrderStatus::Pending, PaymentStatus::Pending, 1000);
 
         $response = $this->actingAs($this->admin)->get(route('admin.dashboard'))->assertOk();
 
@@ -134,8 +145,8 @@ class DashboardTest extends TestCase
     public function money_awaiting_payment_is_surfaced_because_total_sales_excludes_it(): void
     {
         $this->order(OrderStatus::Completed, PaymentStatus::Paid, 10000);
-        $this->order(OrderStatus::PendingPayment, PaymentStatus::Pending, 4500);
-        $this->order(OrderStatus::PendingPayment, PaymentStatus::Pending, 2500);
+        $this->order(OrderStatus::Pending, PaymentStatus::Pending, 4500);
+        $this->order(OrderStatus::Pending, PaymentStatus::Pending, 2500);
 
         $response = $this->actingAs($this->admin)->get(route('admin.dashboard'))->assertOk();
 

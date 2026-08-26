@@ -58,7 +58,7 @@ class CheckoutTest extends TestCase
     }
 
     #[Test]
-    public function an_order_is_created_pending_payment(): void
+    public function an_order_is_created_pending(): void
     {
         $this->cartWith();
 
@@ -66,7 +66,7 @@ class CheckoutTest extends TestCase
 
         $order = Order::firstOrFail();
 
-        $this->assertSame(OrderStatus::PendingPayment, $order->order_status);
+        $this->assertSame(OrderStatus::Pending, $order->order_status);
         $this->assertSame(PaymentStatus::Pending, $order->payment_status);
         $this->assertMatchesRegularExpression('/^ORD-\d{8}-\d{4}$/', $order->order_no);
     }

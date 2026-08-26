@@ -31,7 +31,8 @@ class OrderTest extends TestCase
 
         $order->refresh();
         $this->assertSame(PaymentStatus::Paid, $order->payment_status);
-        $this->assertSame(OrderStatus::Processing, $order->order_status);
+        // Payment received => New Order awaiting fulfilment, not Processing.
+        $this->assertSame(OrderStatus::NewOrder, $order->order_status);
     }
 
     #[Test]

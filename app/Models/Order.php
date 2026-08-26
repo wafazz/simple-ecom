@@ -64,7 +64,9 @@ class Order extends Model
             ->where('payment_status', PaymentStatus::Pending->value)
             ->update([
                 'payment_status' => PaymentStatus::Paid->value,
-                'order_status' => OrderStatus::Processing->value,
+                // Payment received => a new order awaiting fulfilment. The
+                // admin moves it to Processing when they start picking.
+                'order_status' => OrderStatus::NewOrder->value,
                 'updated_at' => now(),
             ]) === 1;
     }

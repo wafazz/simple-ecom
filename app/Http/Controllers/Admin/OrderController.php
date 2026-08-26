@@ -61,7 +61,9 @@ class OrderController extends Controller
     public function updateStatus(Request $request, Order $order): RedirectResponse
     {
         $data = $request->validate([
-            'order_status' => ['required', Rule::enum(OrderStatus::class)],
+            // only() excludes NeedsReview: the system sets that, an admin does
+            // not choose it (Planning §7.5).
+            'order_status' => ['required', Rule::enum(OrderStatus::class)->only(OrderStatus::selectable())],
         ]);
 
         $before = $order->order_status;

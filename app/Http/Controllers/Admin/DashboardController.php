@@ -16,14 +16,19 @@ use Illuminate\View\View;
 class DashboardController extends Controller
 {
     /**
-     * Orders that do not count as business: never paid for, or cancelled.
-     * Everything else is a real sale, including `needs_review` — money was
-     * taken there, it just cannot be fulfilled yet.
+     * Orders that do not count as business. Defined once, on the enum
+     * (OrderStatus::countsAsSale), so the dashboard and any future report
+     * cannot drift apart on what "a sale" means.
+     *
+     * `needs_review` DOES count: money was taken, it just cannot be fulfilled.
      */
-    private const EXCLUDED_FROM_SALES = [
-        OrderStatus::PendingPayment,
-        OrderStatus::Cancelled,
-    ];
+    private static function excludedFromSales(): array
+    {
+        return array_map(
+            fn (OrderStatus $s): string => $s->value,
+            array_filter(OrderStatus::cases(), fn (OrderStatus $s): bool => ! $s->countsAsSale())
+        );
+    }
 
     public function index(): View
     {
@@ -121,10 +126,7 @@ class DashboardController extends Controller
     private function salesMinor(?CarbonInterface $from = null, ?CarbonInterface $to = null): int
     {
         return (int) Order::query()
-            ->whereNotIn('order_status', array_map(
-                fn (OrderStatus $s): string => $s->value,
-                self::EXCLUDED_FROM_SALES
-            ))
+            ->whereNotIn('order_status', self::excludedFromSales())
             ->when($from, fn ($q) => $q->whereBetween('created_at', [$from, $to]))
             ->sum('grand_total_minor');
     }
@@ -133,10 +135,7 @@ class DashboardController extends Controller
     private function soldOrdersCount(): int
     {
         return Order::query()
-            ->whereNotIn('order_status', array_map(
-                fn (OrderStatus $s): string => $s->value,
-                self::EXCLUDED_FROM_SALES
-            ))
+            ->whereNotIn('order_status', self::excludedFromSales())
             ->count();
     }
 

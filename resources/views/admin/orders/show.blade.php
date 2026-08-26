@@ -78,7 +78,15 @@
                         <label for="order_status" class="form-label">Order status</label>
                         <div class="d-flex gap-1">
                             <select name="order_status" id="order_status" class="form-select form-select-sm">
-                                @foreach (\App\Enums\OrderStatus::cases() as $case)
+                                @if (! in_array($order->order_status, \App\Enums\OrderStatus::selectable(), true))
+                                    {{-- The order is in a system-set state. Show it as the
+                                         current selection, otherwise saving the form would
+                                         silently reassign it to the first option. --}}
+                                    <option value="{{ $order->order_status->value }}" selected>
+                                        {{ $order->order_status->label() }} (current)
+                                    </option>
+                                @endif
+                                @foreach (\App\Enums\OrderStatus::selectable() as $case)
                                     <option value="{{ $case->value }}" @selected($order->order_status === $case)>
                                         {{ $case->label() }}
                                     </option>
