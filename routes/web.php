@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\PasswordController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\SettingController;
+use App\Http\Controllers\Admin\ShipmentController;
 use App\Http\Controllers\Admin\VariationController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
@@ -101,6 +102,11 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
         Route::get('/orders/{order:id}', [OrderController::class, 'show'])->name('orders.show');
         Route::patch('/orders/{order:id}/status', [OrderController::class, 'updateStatus'])->name('orders.status');
         Route::patch('/orders/{order:id}/refund', [OrderController::class, 'markRefunded'])->name('orders.refund');
+
+        // REQ-013 — spends real courier credit. POST only: never a link, so a
+        // prefetch or a crawler can never trigger a charge.
+        Route::post('/orders/{order:id}/shipment', [ShipmentController::class, 'store'])
+            ->name('orders.shipment.store');
 
         // Settings (REQ-011)
         Route::get('/settings', [SettingController::class, 'edit'])->name('settings.edit');

@@ -2,11 +2,14 @@
 
 namespace App\Services;
 
+use App\Exceptions\ShipmentBookingFailed;
+use App\Exceptions\ShipmentOutcomeUnknown;
 use App\Models\IntegrationToken;
 use App\Models\Setting;
 use App\Support\IntegrationConfig;
 use App\Support\Money;
 use App\Support\ShippingQuote;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -259,6 +262,94 @@ class EasyParcelService
         return ShippingQuote::flat(Setting::getInt('flat_shipping_fee_minor', 1000));
     }
 
+    /**
+     * Submit ONE shipment order. Planning §11.B.5, REQ-013.
+     *
+     * ⚠ In the 2026-06 API this single call also PAYS — the response carries
+     * `total_paid_amount`. There is no separate pay step to hold back on, so
+     * every safeguard has to sit around this one request:
+     *
+     *  - No retry. `client()` retries once; that is right for a read-only
+     *    quotation and catastrophic here. A retried submit is a second charge.
+     *  - A timeout or an unreadable body raises ShipmentOutcomeUnknown, never
+     *    a plain failure, because the request may have been processed after we
+     *    stopped listening.
+     *  - A 200 can still carry a per-shipment `"status": "error"`; the
+     *    documented error example is exactly that.
+     *
+     * @param  array<string, mixed>  $payload  from ShipmentPayload::for()
+     * @return array<string, mixed> the one successful shipment object
+     *
+     * @throws ShipmentOutcomeUnknown when it is not known whether credit was spent
+     * @throws ShipmentBookingFailed when nothing was charged
+     */
+    public function submitOrder(array $payload): array
+    {
+        $accessToken = $this->accessToken();
+
+        if ($accessToken === null) {
+            throw new ShipmentBookingFailed('EasyParcel is not connected.');
+        }
+
+        try {
+            $response = Http::connectTimeout($this->connectTimeout())
+                ->timeout($this->timeout())
+                ->acceptJson()
+                ->withToken($accessToken)
+                ->post(rtrim($this->baseUrl, '/').'/shipment/submit_orders', $payload);
+        } catch (ConnectionException $e) {
+            // The request may have reached the courier and been processed.
+            throw new ShipmentOutcomeUnknown('EasyParcel did not answer in time: '.$e->getMessage());
+        }
+
+        if ($response->serverError()) {
+            throw new ShipmentOutcomeUnknown('EasyParcel returned HTTP '.$response->status().'.');
+        }
+
+        if (! $response->successful()) {
+            throw new ShipmentBookingFailed('EasyParcel rejected the booking (HTTP '.$response->status().').');
+        }
+
+        if (! json_validate($response->body())) {
+            // A 200 with an unreadable body could still be a processed order.
+            throw new ShipmentOutcomeUnknown('EasyParcel returned a non-JSON body.');
+        }
+
+        return $this->firstShipment((array) $response->json());
+    }
+
+    /**
+     * @param  array<string, mixed>  $body
+     * @return array<string, mixed>
+     */
+    private function firstShipment(array $body): array
+    {
+        $shipment = (array) (data_get($body, 'data.0.shipments.0') ?? []);
+
+        if ($shipment === []) {
+            throw new ShipmentBookingFailed(
+                'EasyParcel accepted the request but returned no shipment. '
+                .(string) ($body['message'] ?? '')
+            );
+        }
+
+        if (($shipment['status'] ?? null) !== 'success') {
+            // Documented: a 200 whose message reads "1 request success, 1
+            // request error". Nothing was charged for THIS parcel.
+            throw new ShipmentBookingFailed(
+                'EasyParcel rejected this parcel: '
+                .(string) ($shipment['remarks'] ?? $shipment['message'] ?? $body['message'] ?? 'no reason given')
+            );
+        }
+
+        // The order number identifies the batch this parcel was billed under —
+        // it is what an admin searches for in the EasyParcel dashboard when
+        // reconciling, so it travels with the shipment.
+        $shipment['_order_number'] = data_get($body, 'data.0.order_details.order_number');
+
+        return $shipment;
+    }
+
     /** @return array<int, ShippingQuote> */
     private function requestQuotations(string $postcode, string $state, int $weightG): array
     {
@@ -339,9 +430,9 @@ class EasyParcelService
     }
 
     /**
-     * ⚠ The weight UNIT is not stated in the published request shape. `kg` is
-     * the EasyParcel convention and the default; EASYPARCEL_WEIGHT_UNIT can
-     * switch it to grams once a live call confirms which is right (OQ-13).
+     * KG — confirmed against the official quotation reference on 2026-08-27
+     * ("Parcel weight in KG"), which closed OQ-13. EASYPARCEL_WEIGHT_UNIT is
+     * kept only as an escape hatch if a future API version changes it.
      */
     private function weightForApi(int $weightG): float|int
     {

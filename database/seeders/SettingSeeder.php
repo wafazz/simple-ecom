@@ -27,6 +27,22 @@ class SettingSeeder extends Seeder
             // when a variant has no weight recorded (OQ-01).
             'default_weight_g' => '500',
 
+            // Sender details — required by shipment booking (REQ-013).
+            // Placeholders: a booking cannot be assembled until these are real.
+            'pickup_name' => 'Basic Custom E-Commerce',
+            'pickup_company' => '',
+            'pickup_phone' => '01X-XXXXXXX',
+            'pickup_phone_country_code' => 'MY',
+            'pickup_email' => 'hello@basic-ecom.test',
+            'pickup_address_1' => '',
+            'pickup_address_2' => '',
+            'pickup_city' => '',
+
+            'default_length_mm' => '250',
+            'default_width_mm' => '180',
+            'default_height_mm' => '80',
+            'collection_lead_days' => '1',
+
             // Charged when the rate API is unreachable, so a courier outage
             // never costs a sale (Planning §11.B.6, OQ-04).
             'flat_shipping_fee_minor' => '1000',

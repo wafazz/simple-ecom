@@ -33,6 +33,10 @@ class SettingTest extends TestCase
             'default_weight_g' => 600,
             'flat_shipping_fee' => '12.50',
             'low_stock_threshold' => 3,
+            'default_length_mm' => 250,
+            'default_width_mm' => 180,
+            'default_height_mm' => 80,
+            'collection_lead_days' => 1,
         ], $overrides);
     }
 
@@ -79,6 +83,32 @@ class SettingTest extends TestCase
         $this->actingAs($this->admin)->put(route('admin.settings.update'), $this->payload());
 
         $this->assertSame('Kedai Contoh', Setting::get('store_name'));
+    }
+
+    #[Test]
+    public function sender_details_needed_for_booking_are_saved(): void
+    {
+        // A quote needs only postcode + state; a booking needs the full sender.
+        $this->actingAs($this->admin)->put(route('admin.settings.update'), $this->payload([
+            'pickup_name' => 'Kedai Contoh Sdn Bhd',
+            'pickup_phone' => '0123456789',
+            'pickup_phone_country_code' => 'MY',
+            'pickup_address_1' => '12 Jalan Perusahaan',
+            'pickup_city' => 'Georgetown',
+        ]))->assertSessionHasNoErrors();
+
+        $this->assertSame('Kedai Contoh Sdn Bhd', Setting::get('pickup_name'));
+        $this->assertSame('12 Jalan Perusahaan', Setting::get('pickup_address_1'));
+        $this->assertSame('Georgetown', Setting::get('pickup_city'));
+    }
+
+    #[Test]
+    public function a_zero_default_parcel_dimension_is_rejected(): void
+    {
+        // A parcel must never be submitted at zero size.
+        $this->actingAs($this->admin)
+            ->put(route('admin.settings.update'), $this->payload(['default_length_mm' => 0]))
+            ->assertSessionHasErrors('default_length_mm');
     }
 
     #[Test]

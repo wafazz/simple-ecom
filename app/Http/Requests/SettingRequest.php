@@ -35,6 +35,23 @@ class SettingRequest extends FormRequest
             'default_weight_g' => ['required', 'integer', 'min:1', 'max:100000'],
             'flat_shipping_fee' => ['required', 'numeric', 'min:0', 'max:100000'],
             'low_stock_threshold' => ['required', 'integer', 'min:0', 'max:10000'],
+
+            // Sender details for shipment booking (REQ-013). Nullable so the
+            // rest of Settings stays editable before booking is set up; the
+            // booking path checks completeness separately and refuses without.
+            'pickup_name' => ['nullable', 'string', 'max:255'],
+            'pickup_company' => ['nullable', 'string', 'max:255'],
+            'pickup_phone' => ['nullable', 'string', 'max:32'],
+            'pickup_phone_country_code' => ['nullable', 'string', 'size:2'],
+            'pickup_email' => ['nullable', 'string', 'email', 'max:255'],
+            'pickup_address_1' => ['nullable', 'string', 'max:255'],
+            'pickup_address_2' => ['nullable', 'string', 'max:255'],
+            'pickup_city' => ['nullable', 'string', 'max:100'],
+
+            'default_length_mm' => ['required', 'integer', 'min:1', 'max:300000'],
+            'default_width_mm' => ['required', 'integer', 'min:1', 'max:300000'],
+            'default_height_mm' => ['required', 'integer', 'min:1', 'max:300000'],
+            'collection_lead_days' => ['required', 'integer', 'min:0', 'max:30'],
         ];
     }
 

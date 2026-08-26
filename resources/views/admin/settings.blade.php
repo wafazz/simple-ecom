@@ -97,6 +97,64 @@
                     </div>
                 </div>
 
+                <div class="card mb-3">
+                    <div class="card-header">Sender details &amp; parcel defaults</div>
+                    <div class="card-body row g-3">
+                        <div class="col-12">
+                            <p class="text-muted small mb-0">
+                                Courier <em>quotes</em> need only a postcode and state. <strong>Booking a
+                                shipment</strong> needs the full sender address and a parcel size — without
+                                them a booking cannot be assembled at all.
+                            </p>
+                        </div>
+
+                        @foreach ([
+                            ['pickup_name', 'Sender name', 'text', 'col-md-6'],
+                            ['pickup_company', 'Company (optional)', 'text', 'col-md-6'],
+                            ['pickup_phone', 'Sender phone', 'text', 'col-md-4'],
+                            ['pickup_phone_country_code', 'Phone country code', 'text', 'col-md-2'],
+                            ['pickup_email', 'Sender email', 'email', 'col-md-6'],
+                            ['pickup_address_1', 'Address line 1', 'text', 'col-md-6'],
+                            ['pickup_address_2', 'Address line 2 (optional)', 'text', 'col-md-6'],
+                            ['pickup_city', 'City', 'text', 'col-md-6'],
+                        ] as [$field, $label, $type, $cols])
+                            <div class="{{ $cols }}">
+                                <label for="{{ $field }}" class="form-label">{{ $label }}</label>
+                                <input type="{{ $type }}" name="{{ $field }}" id="{{ $field }}"
+                                       value="{{ old($field, $settings[$field] ?? config('shop.'.$field)) }}"
+                                       class="form-control @error($field) is-invalid @enderror">
+                                @error($field) <div class="invalid-feedback">{{ $message }}</div> @enderror
+                            </div>
+                        @endforeach
+
+                        <div class="col-12"><hr class="my-1"></div>
+
+                        @foreach ([
+                            ['default_length_mm', 'Default length (mm)'],
+                            ['default_width_mm', 'Default width (mm)'],
+                            ['default_height_mm', 'Default height (mm)'],
+                        ] as [$field, $label])
+                            <div class="col-md-3">
+                                <label for="{{ $field }}" class="form-label">{{ $label }}</label>
+                                <input type="number" min="1" name="{{ $field }}" id="{{ $field }}" required
+                                       value="{{ old($field, $settings[$field] ?? config('shop.'.$field)) }}"
+                                       class="form-control @error($field) is-invalid @enderror">
+                                @error($field) <div class="invalid-feedback">{{ $message }}</div> @enderror
+                            </div>
+                        @endforeach
+
+                        <div class="col-md-3">
+                            <label for="collection_lead_days" class="form-label">Collection in (days)</label>
+                            <input type="number" min="0" max="30" name="collection_lead_days"
+                                   id="collection_lead_days" required
+                                   value="{{ old('collection_lead_days', $settings['collection_lead_days'] ?? config('shop.collection_lead_days')) }}"
+                                   class="form-control @error('collection_lead_days') is-invalid @enderror">
+                            <div class="form-text">1 = ask the courier to collect tomorrow.</div>
+                            @error('collection_lead_days') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                        </div>
+                    </div>
+                </div>
+
                 <button type="submit" class="btn btn-shop">Save settings</button>
             </form>
         </div>

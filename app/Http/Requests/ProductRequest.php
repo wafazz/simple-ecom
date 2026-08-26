@@ -46,6 +46,10 @@ class ProductRequest extends FormRequest
             'variants.*.price' => ['required', 'numeric', 'min:0', 'max:99999999'],
             'variants.*.stock_qty' => ['required', 'integer', 'min:0'],
             'variants.*.weight_g' => ['required', 'integer', 'min:0', 'max:100000'],
+            // Blank falls back to the store default; booking never sends zero.
+            'variants.*.length_mm' => ['nullable', 'integer', 'min:0', 'max:300000'],
+            'variants.*.width_mm' => ['nullable', 'integer', 'min:0', 'max:300000'],
+            'variants.*.height_mm' => ['nullable', 'integer', 'min:0', 'max:300000'],
             'variants.*.status' => ['required', Rule::enum(VariantStatus::class)],
             'variants.*.option1_name' => ['nullable', 'string', 'max:50'],
             'variants.*.option1_value' => ['nullable', 'string', 'max:100'],

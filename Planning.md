@@ -1,6 +1,6 @@
 # Planning.md — Basic Custom E-Commerce (Laravel 12 / PHP 8.3)
 
-> **Status**: **DELIVERED 2026-08-27.** Phases 1–11 complete. REQ-013 (8b) **not built — blocked on OQ-13**; REQ-005 cannot settle live until **OQ-11**.
+> **Status**: **DELIVERED 2026-08-27.** Phases 1–11 complete, REQ-013 (8b) included — OQ-11 and OQ-13 both **CLOSED** against the official references on 2026-08-27. No requirement is outstanding.
 > **Last Updated**: 2026-08-26
 > **Spec source**: `Prompt.txt` — *CoreSentinel Development Instruction — Laravel 12 Basic Custom E-Commerce* (36 sections)
 > **Agent**: Iris / CoreSentinel · Init Protocol `05-init-protocol.md`
@@ -53,7 +53,7 @@ Status vocabulary: `Planned` | `In-Progress` | `Verified` | `Done`.
 | `REQ-010` | Security Controls | `bootstrap/app.php`<br>`app/Http/Requests/*`<br>route middleware groups | all | `tests/Feature/SecurityTest.php` | `docs/documentation.md#security` | `Verified` — Phase 10 |
 | `REQ-011` | Store Settings | `app/Http/Controllers/Admin/SettingController.php`<br>`app/Models/Setting.php` | admin group | `tests/Feature/SettingTest.php` | `docs/documentation.md#settings` | `Verified` — Phase 9 |
 | `REQ-012` | Error Handling & Logging | `bootstrap/app.php` (`withExceptions`)<br>`config/logging.php`<br>`app/Http/Middleware/AssignRequestId.php` | all | `tests/Feature/ErrorHandlingTest.php` | `docs/documentation.md#logging` | `Verified` — Phase 10 |
-| `REQ-013` | **Shipment Booking, AWB & Tracking** | **Built:** `app/Models/Shipment.php`, `app/Enums/ShipmentStatus.php`, `database/migrations/...create_shipments_table.php`<br>**NOT built:** `Admin/ShipmentController.php`, `EasyParcelService` booking methods, reconciliation screen, tracking | — | `tests/Feature/ShipmentBookingTest.php` (schema + state guards only) | `docs/documentation.md#booking` | `Blocked` — **OQ-13**. Data layer and guards only; no booking path exists |
+| `REQ-013` | **Shipment Booking, AWB & Tracking** | `app/Models/Shipment.php`, `app/Enums/ShipmentStatus.php`, `app/Support/ShipmentPayload.php`, `app/Services/ShipmentBookingService.php`, `EasyParcelService::submitOrder()`, `app/Http/Controllers/Admin/ShipmentController.php`, `app/Exceptions/Shipment{BookingFailed,OutcomeUnknown}.php`, `resources/views/admin/orders/show.blade.php` | `POST admin/orders/{order}/shipment` | `tests/Feature/ShipmentBookingTest.php` (16), `tests/Feature/ShipmentPayloadTest.php` (9) | `docs/documentation.md#booking` | `Done` — OQ-13 closed; booking, AWB, label and tracking URL land on the order screen |
 
 Every commit message references its `REQ-0NN`. No orphan code.
 
@@ -806,16 +806,23 @@ Automatic booking on payment is a later option once the flow has run in producti
 
 ##### 11.B.5.3 The money-left-the-wallet failure mode — and the guard
 
-The dangerous sequence is: call `pay` → EasyParcel debits the credit → our DB write fails →
-we have no record, and the admin books it again.
+The dangerous sequence is: `submit_orders` → EasyParcel debits the credit → our DB write
+fails → we have no record, and the admin books it again.
+
+⚠ **Corrected 2026-08-27 against the official reference.** This section was written
+against the older two-call `submit` → `pay` flow. In the 2026-06 API there is only
+`shipment/submit_orders`, and its response already carries `total_paid_amount` — **the
+single call is the charge.** There is no gap between submitting and paying to hold a
+decision in, so every safeguard has to sit around that one request.
 
 **Control: write the record first, in a pending state, and never delete it.**
 
 1. **Before** any API call, insert a `shipments` row for the order in `pending_submit`, inside a transaction with a **`UNIQUE(order_id)`** key. That unique key is what makes double-booking structurally impossible — a second "Book shipment" click hits a duplicate-key error, not a second charge.
 2. Guarded transition to `submitting` — `WHERE status = 'pending_submit'` — with the affected-row count asserted, the same *Atomic Race-Free Action Guard* used for payment (Planning §11.A.5). Only one request proceeds.
-3. Call `submit`. Persist the returned reference **immediately**, before anything else, even if the rest of the response is unexpected.
-4. Call `pay`. On **any** outcome — success, failure, timeout, unparseable body — write the raw response to `shipments.raw_response` and move the row to a definite state.
-5. **A timeout on `pay` is not a failure — it is an unknown.** The row goes to `needs_reconciliation`, never to `failed`. Retrying a `pay` that may have succeeded is how a store pays twice.
+3. Call `shipment/submit_orders` **exactly once, with no HTTP retry.** The shared client retries once, which is right for a read-only quotation and catastrophic here: a retried submit is a second charge. Booking builds its own non-retrying request.
+4. On **any** outcome — success, rejection, timeout, unparseable body — write the raw response to `shipments.raw_response` and move the row to a definite state.
+5. **A timeout is not a failure — it is an unknown.** Only two outcomes are treated as "nothing was charged, safe to retry": a 4xx, and a documented per-parcel `"status": "error"` inside an otherwise-200 body. A timeout, a 5xx, or a body that will not parse goes to `needs_reconciliation`, never to `failed`. Retrying a call that may have succeeded is how a store pays twice.
+6. This is enforced in the type system, not by convention: `ShipmentOutcomeUnknown` and `ShipmentBookingFailed` are **different exception classes**, and only the second one leaves the row retryable.
 
 ##### 11.B.5.4 Shipment states
 

@@ -2,7 +2,7 @@
 
 > **Status**: Active | **Last Updated**: 2026-08-26 | **Maintainer**: Iris / CoreSentinel
 
-> **DELIVERED 2026-08-27. Phases 1–11 complete.** REQ-013 not built (blocked on OQ-13); REQ-005 cannot settle live until OQ-11. Latest `68b54a7`.
+> **DELIVERED 2026-08-27. Phases 1–11 complete, REQ-001…REQ-013.** OQ-11 (ToyyibPay) and OQ-13 (EasyParcel) both closed against the official references on 2026-08-27. Nothing is outstanding.
 > Database, core MVC, the catalogue, cart, checkout and ToyyibPay payment are built and
 > tested. ⚠ **Payment cannot settle a live transaction until OQ-11 is answered** — the
 > service fails closed by design. EasyParcel and the remaining admin screens are still
@@ -52,7 +52,7 @@ Standard Laravel 12 structure (§19). Route → Controller → Form Request → 
 | `app/Http/Controllers/Admin/ProductController.php` | Controller | Product CRUD + deactivate, image upload |
 | `app/Http/Controllers/Admin/VariationController.php` | Controller | Variant CRUD, stock edit |
 | `app/Http/Controllers/Admin/OrderController.php` | Controller | Order list, detail, status update |
-| ~~`app/Http/Controllers/Admin/ShipmentController.php`~~ | Controller | ⛔ **NOT BUILT** — blocked on OQ-13. Planned: book shipment (POST, admin-only), shipment list, reconciliation screen, label link (REQ-013) |
+| `app/Http/Controllers/Admin/ShipmentController.php` | Controller | Books the courier. **POST only, admin-only** — a charge must never be reachable by a link, prefetch or crawler. Translates the two booking exceptions into flash messages; an unknown outcome tells the admin explicitly not to try again (REQ-013) |
 | `app/Http/Controllers/Admin/SettingController.php` | Controller | Store settings; credential **status** only, never values |
 | `app/Http/Controllers/Admin/IntegrationController.php` | Controller | EasyParcel connect / callback / disconnect *(only if the account is on the Open API — OQ-03)* |
 
@@ -70,6 +70,10 @@ Standard Laravel 12 structure (§19). Route → Controller → Form Request → 
 | `app/Models/Setting.php` | Key/value config. **Non-secret only**. `updateOrCreate()` |
 | `app/Models/IntegrationToken.php` | EasyParcel OAuth tokens, `encrypted` cast *(OQ-03)* |
 | `app/Models/Shipment.php` | Courier booking, AWB, tracking. **`UNIQUE(order_id)`** — the anti-double-booking guard. `belongsTo(Order)` |
+| `app/Support/ShipmentPayload.php` | Builds the `submit_orders` body from an order — grams→KG, mm→CM — and `missingFor()` names every gap *before* a request goes out |
+| `app/Services/ShipmentBookingService.php` | The only code that spends real courier credit. Refuse → write the row → claim it with a guarded `UPDATE` → call once → record the outcome, including "unknown" |
+| `app/Exceptions/ShipmentOutcomeUnknown.php` | May or may not have been charged → `needs_reconciliation`, never auto-retried |
+| `app/Exceptions/ShipmentBookingFailed.php` | Definitively not charged → safe to fix and retry |
 | `app/Enums/ShipmentStatus.php` | Backed string enum incl. **`needs_reconciliation`** (Planning §11.B.5.4) |
 | `app/Enums/OrderStatus.php` | Backed string enum (§14) |
 | `app/Enums/PaymentStatus.php` | Backed string enum, separate from order status (§14) |
@@ -79,7 +83,7 @@ Standard Laravel 12 structure (§19). Route → Controller → Form Request → 
 | File | Justification |
 |---|---|
 | `app/Services/ToyyibPayService.php` | External integration. API communication, response normalisation, meaningful exceptions, failure logging. **Fails closed** on any unrecognised response shape |
-| `app/Services/EasyParcelService.php` | External integration. **Built:** quotations, OAuth token lifecycle with rotation mutex, flat-rate fallback. ⛔ **Booking (`submit`/`pay`), AWB retrieval and tracking are NOT built** — blocked on OQ-13. One service, not split by operation (§22) |
+| `app/Services/EasyParcelService.php` | External integration. Quotations, OAuth token lifecycle with rotation mutex, flat-rate fallback, and `submitOrder()` — the one call that spends courier credit, which is why it builds a **non-retrying** client of its own. One service, not split by operation (§22) |
 | `app/Services/CartService.php` | Session-cart logic genuinely shared between the cart and checkout controllers — not a service-per-model |
 
 **Not built** (§22): `UniversalPaymentProviderFactory`, `UniversalShippingProviderFactory`, `AbstractIntegrationManager`, `IntegrationOrchestrator`, repositories, interfaces over either service.
@@ -134,10 +138,26 @@ Sandbox `https://dev.toyyibpay.com`, production `https://toyyibpay.com`.
 **EasyParcel Open API 2026-06** (§13) — `POST https://api.easyparcel.com/open_api/2026-06/shipment/quotations`, Bearer token.
 Geography is **ISO 3166-2** (`MY-07` = Penang). `pricing.total_amount` is a **decimal string**, not minor units — converted to sen once at the service boundary.
 OAuth: `GET /oauth/login`, `POST /oauth/token` (Basic auth). Access ≈10h, refresh ≈1y, **the refresh token rotates on every use**.
-⚠ `../Planning.md` §11.B.2 — §31's `EASYPARCEL_API_KEY` is the *legacy Connect API* shape. Which API the account uses is **OQ-03** and it changes this contract.
+⚠ `../Planning.md` §11.B.2 — §31's `EASYPARCEL_API_KEY` is the *legacy Connect API* shape. This build uses the **2026-06 OpenAPI**, confirmed against the official reference (OQ-03/OQ-13 closed).
 
-**EasyParcel booking (REQ-013)** — `POST …/shipment/submit`, `POST …/shipment/pay`, plus tracking.
-⚠ **The request and response bodies are `NEEDS VERIFICATION`** (`../Planning.md` §11.B.5.1) — including where the AWB number appears, the tracking mechanism, and whether an idempotency key is accepted. **Phase 8b is blocked until these are read from the official specification (OQ-13).** The control design in §11.B.5.3 holds regardless of field names.
+**EasyParcel booking (REQ-013)** — `POST …/shipment/submit_orders`. **Verified against the
+official 2026-06 reference on 2026-08-27; OQ-13 CLOSED.**
+
+⚠ **There is no separate `pay` call.** The submit response already carries
+`pricing_breakdown.total_paid_amount` — *submitting is paying*. Consequences that are
+easy to get wrong:
+
+| | |
+|---|---|
+| Units | Weight in **KG**, dimensions in **CM** — the database keeps grams and millimetres. `App\Support\Dimensions` converts, and `ShipmentPayloadTest` pins it. |
+| Retries | **Never.** `EasyParcelService::submitOrder()` builds its own client without `->retry()`; the shared `client()` retries once and would charge twice. |
+| A 200 is not a success | The documented error example is HTTP 200 with `"message": "1 request success, 1 request error"`. The per-parcel `status` field is what decides. |
+| AWB timing | `awb_number` and `tracking_url` are **`null` in the published success example** — the courier issues them later, so a booked shipment with no AWB yet is normal, not a bug. |
+
+Assembly lives in `app/Support/ShipmentPayload.php`, deliberately outside the service:
+the service talks to the API, the payload decides what a shipment *is*.
+`ShipmentPayload::missingFor()` names every gap **before** a request goes out, because
+discovering them as a courier rejection means the money-spending call already happened.
 
 ### 3.4 Invariants that must not be broken
 
@@ -148,7 +168,8 @@ OAuth: `GET /oauth/login`, `POST /oauth/token` (Basic auth). Access ≈10h, refr
 5. **All money is integer sen.** No float touches the payment path.
 6. **Every total is computed server-side** from DB values. Client-side prices, stock, totals, redirects, hidden fields and query params are never trusted (§17).
 7. **A shipment is booked at most once per order.** `UNIQUE(shipments.order_id)` + a guarded `pending_submit` → `submitting` transition. Booking is an admin POST, never a callback or a GET.
-8. **An ambiguous booking outcome is `needs_reconciliation`, never `failed`, and is never auto-retried.** Retrying a `pay` that may have succeeded is how the store pays twice.
+8. **An ambiguous booking outcome is `needs_reconciliation`, never `failed`, and is never auto-retried.** Enforced by type: `ShipmentOutcomeUnknown` (timeout, 5xx, unparseable body) and `ShipmentBookingFailed` (4xx, per-parcel rejection, missing data) are different exception classes, and only the second leaves the row retryable. Retrying a call that may have succeeded is how the store pays twice.
+9. **A booking request is never retried at the HTTP layer.** One call, one charge.
 
 ---
 
@@ -238,6 +259,7 @@ Runtime: the Laravel 12 skeleton only. Dev: `phpunit/phpunit ^11.5`, `laravel/pi
 | 2026-08-27 | **Owner/HQ dashboard.** Headline tiles + four period comparisons. Ads Cost/ROAS were specified but have no data source in this system, so they were replaced with **Average Order Value** and **Payment Conversion**, both derived from order data; the ads-spend setting added for them was removed rather than left dead. Money awaiting payment surfaced in the attention panel because Total Sales excludes it by definition | `app/Http/Controllers/Admin/DashboardController.php`, `resources/views/admin/dashboard.blade.php`, `resources/views/components/delta.blade.php`, `app/Support/Money.php`, `public/css/app.css` | Iris |
 | 2026-08-27 | **Admin template — AdminLTE 4.9.1** (client request). Admin layout, login and dashboard rebuilt on the AdminLTE shell; assets vendored locally with a no-CDN test. Fixed: the storefront never loaded Bootstrap JS, so the mobile navbar toggler had been inert since Phase 4 | `resources/views/layouts/admin.blade.php`, `resources/views/admin/{login,dashboard}.blade.php`, `public/vendor/*`, `public/js/bootstrap.bundle.min.js`, `app/Http/Controllers/Admin/DashboardController.php` | Iris (`8e53864`) |
 | 2026-08-27 | **Phase 11 — Deployment.** DEPLOYMENT.md VPS runbook; `users.must_change_password` + RequirePasswordChange middleware; AdminSeeder refuses default credentials in production; `shop:create-admin` command; README updated for handoff | `DEPLOYMENT.md`, `README.md`, `app/Http/Middleware/RequirePasswordChange.php`, `app/Console/Commands/CreateAdminCommand.php`, `database/seeders/AdminSeeder.php` | Iris (`68b54a7`) |
+| 2026-08-27 | **REQ-013 — shipment booking built. OQ-13 closed.** Added the data booking needs (variant `length_mm`/`width_mm`/`height_mm`, sender details and parcel defaults in Settings), `ShipmentPayload` (grams→KG, mm→CM), `EasyParcelService::submitOrder()` (non-retrying), `ShipmentBookingService`, an admin-only POST route and the Book-shipment UI with AWB, label and tracking links. **Correction:** the 2026-06 API has no separate `pay` call — `submit_orders` charges on the one request, so §11.B.5.3 was rewritten around it | `app/Support/{ShipmentPayload,Dimensions}.php`, `app/Services/{EasyParcelService,ShipmentBookingService}.php`, `app/Exceptions/Shipment*.php`, `app/Http/Controllers/Admin/ShipmentController.php`, `database/migrations/2026_08_27_160000_*`, `config/shop.php`, `resources/views/admin/{settings,orders/show,products/form}.blade.php`, `tests/Feature/Shipment*Test.php` | Iris |
 | 2026-08-27 | **Phase 3 — Database.** 10 tables, 4 backed enums, 10 Eloquent models, 8 factories, 3 seeders. Atomic guards implemented and tested: stock decrement, paid transition, shipment booking | `database/migrations/*`, `app/Enums/*`, `app/Models/*`, `database/factories/*`, `database/seeders/*`, `tests/Feature/*` | Iris (`23bb05a`) |
 
 ---

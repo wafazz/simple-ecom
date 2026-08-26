@@ -17,6 +17,9 @@ class ProductVariantFactory extends Factory
             'price_minor' => fake()->numberBetween(1000, 20000),
             'stock_qty' => fake()->numberBetween(1, 50),
             'weight_g' => fake()->numberBetween(100, 2000),
+            'length_mm' => 200,
+            'width_mm' => 150,
+            'height_mm' => 50,
             'status' => VariantStatus::Active,
             // '' not null — see Planning §7.1.
             'option1_name' => '',

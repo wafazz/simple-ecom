@@ -1,8 +1,7 @@
 # Basic Custom E-Commerce
 
 Single-vendor storefront for a small business — product variations, guest checkout,
-ToyyibPay payment, and EasyParcel courier rates. (Shipment booking is specified but
-not built — see below.)
+ToyyibPay payment, and EasyParcel courier rates, booking, AWB and tracking.
 
 | | |
 |---|---|
@@ -10,7 +9,7 @@ not built — see below.)
 | Spec | [`Prompt.txt`](Prompt.txt) — 36 sections, authoritative |
 | Plan | [`Planning.md`](Planning.md) — approved 2026-08-26, `REQ-001`…`REQ-013` |
 | Docs | [`docs/documentation.md`](docs/documentation.md) |
-| Status | **Feature complete** — Phases 1–11. Two items unresolved before go-live: see below. |
+| Status | **Feature complete** — Phases 1–11, `REQ-001`…`REQ-013`. Both open questions closed. |
 
 ## Local setup
 
@@ -64,14 +63,17 @@ Full detail in `Planning.md`; these are the ones that cause silent damage if bro
 - **Unused variant option slots store `''`, never `NULL`** — MySQL treats NULLs as
   distinct in a unique index.
 - **A shipment is booked at most once per order** (`UNIQUE(shipments.order_id)`), and an
-  ambiguous `pay` outcome goes to `needs_reconciliation` — **never auto-retried**.
+  ambiguous booking outcome goes to `needs_reconciliation` — **never auto-retried**.
+- **Never add `->retry()` to the booking request.** `EasyParcelService::submitOrder()`
+  builds its own non-retrying client on purpose: that one call spends real courier
+  credit, so a retry is a second charge.
 
 ## ⚠ Before taking real payments
 
 | | |
 |---|---|
 | ~~OQ-11~~ | ✅ **Closed 2026-08-27** — verified against the official API reference. Field names confirmed, amount format confirmed, callback hash validation implemented. Live payments are no longer blocked. |
-| **OQ-13** | Shipment booking, AWB and tracking (REQ-013) are **not built** — the `shipment/submit` / `shipment/pay` payloads were never verified. Courier *rates* work. |
+| ~~OQ-13~~ | ✅ **Closed 2026-08-27** — verified against the official EasyParcel OpenAPI reference. Booking is built. ⚠ `shipment/submit_orders` **charges your courier credit on the one call** — there is no separate pay step to hold back on. |
 
 If payments are not settling, check `storage/logs` for `Payment left UNVERIFIED` —
 the reason now includes an excerpt of what the gateway actually replied.

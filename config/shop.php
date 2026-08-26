@@ -22,6 +22,33 @@ return [
     // Backstop so a quotation is never requested at zero weight (OQ-01).
     'default_weight_g' => 500,
 
+    /*
+     * Sender details for shipment booking (REQ-013).
+     *
+     * EasyParcel's submit_orders requires name, phone (with an ISO country
+     * code), address_1, postcode, city and country_code for the sender. A
+     * quotation only needs postcode + subdivision, which is why these were not
+     * collected before.
+     */
+    'pickup_name' => null,
+    'pickup_company' => null,
+    'pickup_phone' => null,
+    'pickup_phone_country_code' => 'MY',
+    'pickup_email' => null,
+    'pickup_address_1' => null,
+    'pickup_address_2' => null,
+    'pickup_city' => null,
+
+    // Default parcel size in millimetres, used when a variation has none.
+    // A parcel is never submitted at zero size.
+    'default_length_mm' => 250,
+    'default_width_mm' => 180,
+    'default_height_mm' => 80,
+
+    // Days ahead to ask the courier to collect. submit_orders requires a
+    // collection_date; 1 = tomorrow.
+    'collection_lead_days' => 1,
+
     // Charged when the rate API is unreachable (Planning §11.B.6, OQ-04).
     'flat_shipping_fee_minor' => 1000,
 

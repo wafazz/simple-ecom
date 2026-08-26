@@ -117,6 +117,7 @@
                         <th style="min-width: 7rem">Price ({{ $symbol }})</th>
                         <th style="min-width: 6rem">Stock</th>
                         <th style="min-width: 7rem">Weight (g)</th>
+                        <th style="min-width: 12rem">L &times; W &times; H (mm)</th>
                         <th style="min-width: 7rem">Status</th>
                         <th class="opt-col"></th>
                     </tr>
@@ -163,6 +164,17 @@
                                 <input type="number" min="0" name="variants[{{ $i }}][weight_g]" required
                                        value="{{ $row['weight_g'] ?? config('shop.default_weight_g') }}"
                                        class="form-control form-control-sm">
+                            </td>
+                            <td>
+                                {{-- Booking needs a parcel size; blank falls back
+                                     to the store default from Settings. --}}
+                                <div class="d-flex gap-1">
+                                    @foreach (['length_mm', 'width_mm', 'height_mm'] as $dim)
+                                        <input type="number" min="0" name="variants[{{ $i }}][{{ $dim }}]"
+                                               value="{{ $row[$dim] ?? '' }}" placeholder="{{ config('shop.default_'.$dim) }}"
+                                               class="form-control form-control-sm" style="width: 4rem">
+                                    @endforeach
+                                </div>
                             </td>
                             <td>
                                 <select name="variants[{{ $i }}][status]" class="form-select form-select-sm">

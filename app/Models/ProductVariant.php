@@ -14,6 +14,7 @@ class ProductVariant extends Model
 
     protected $fillable = [
         'product_id', 'sku', 'price_minor', 'stock_qty', 'weight_g', 'status',
+        'length_mm', 'width_mm', 'height_mm',
         'option1_name', 'option1_value', 'option2_name', 'option2_value',
     ];
 
@@ -25,6 +26,9 @@ class ProductVariant extends Model
             'price_minor' => 'integer',
             'stock_qty' => 'integer',
             'weight_g' => 'integer',
+            'length_mm' => 'integer',
+            'width_mm' => 'integer',
+            'height_mm' => 'integer',
             'status' => VariantStatus::class,
         ];
     }

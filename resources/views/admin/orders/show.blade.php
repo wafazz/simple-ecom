@@ -147,14 +147,77 @@
                             </td>
                         </tr>
                         <tr><th>AWB</th><td><code>{{ $order->shipment?->awb_no ?? '—' }}</code></td></tr>
+                        @if ($order->shipment?->cost_minor)
+                            <tr>
+                                <th>Courier charged</th>
+                                <td>
+                                    {{ $currencySymbol }}{{ \App\Support\Money::display($order->shipment->cost_minor) }}
+                                    @if ($order->shipment->cost_minor > $order->shipping_fee_minor)
+                                        <span class="badge text-bg-warning ms-1">above what the customer paid</span>
+                                    @endif
+                                </td>
+                            </tr>
+                        @endif
                         </tbody>
                     </table>
 
-                    @unless ($order->shipment)
-                        <p class="text-muted small mt-2 mb-0">
-                            Shipment booking arrives in Phase 8b.
-                        </p>
-                    @endunless
+                    @php($shipment = $order->shipment)
+
+                    @if ($shipment?->status === \App\Enums\ShipmentStatus::NeedsReconciliation)
+                        <div class="alert alert-danger small mt-2 mb-0">
+                            <strong>Outcome unknown.</strong> The courier may already have been
+                            paid for this parcel. Check the EasyParcel dashboard before doing
+                            anything else — this will not retry on its own.
+                        </div>
+                    @elseif ($shipment && ! $shipment->status->isRetryable())
+                        <div class="d-flex align-items-center gap-2 mt-2">
+                            <span class="badge text-bg-success">{{ $shipment->status->label() }}</span>
+                            @if ($shipment->tracking_url)
+                                <a href="{{ $shipment->tracking_url }}" target="_blank" rel="noopener noreferrer"
+                                   class="small">Track parcel</a>
+                            @endif
+                            @if ($shipment->label_url)
+                                <a href="{{ $shipment->label_url }}" target="_blank" rel="noopener noreferrer"
+                                   class="small">Print AWB label</a>
+                            @endif
+                        </div>
+                    @else
+                        @php($missing = \App\Support\ShipmentPayload::missingFor($order))
+
+                        @if ($shipment?->status === \App\Enums\ShipmentStatus::Failed)
+                            <div class="alert alert-warning small mt-2">
+                                Last attempt failed: {{ $shipment->raw_response['error'] ?? 'no reason recorded' }}
+                            </div>
+                        @endif
+
+                        @if ($order->payment_status !== \App\Enums\PaymentStatus::Paid)
+                            <p class="text-muted small mt-2 mb-0">
+                                Booking becomes available once payment is confirmed.
+                            </p>
+                        @elseif ($missing)
+                            {{-- Named up front. Discovering these as a courier
+                                 rejection means the request has already gone out. --}}
+                            <div class="alert alert-secondary small mt-2 mb-0">
+                                <strong>Not ready to book.</strong> Still missing:
+                                <ul class="mb-0 mt-1">
+                                    @foreach ($missing as $item)
+                                        <li>{{ $item }}</li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        @else
+                            <form method="POST" action="{{ route('admin.orders.shipment.store', $order) }}"
+                                  class="mt-2">
+                                @csrf
+                                <button type="submit" class="btn btn-shop btn-sm">
+                                    <i class="bi bi-truck me-1"></i>Book shipment
+                                </button>
+                                <div class="form-text">
+                                    This spends your EasyParcel credit immediately and cannot be undone here.
+                                </div>
+                            </form>
+                        @endif
+                    @endif
                 </div>
             </div>
         </div>
