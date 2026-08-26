@@ -341,6 +341,59 @@
     }
 
     /* -----------------------------------------------------------------------
+       Admin order list: select-all and the bulk bar
+
+       The checkboxes and both buttons work without any of this — every one is
+       a real form control posting to the same route. This only adds the
+       select-all, the count, and hiding the bulk bar until something is ticked.
+       ----------------------------------------------------------------------- */
+
+    var orderTable = $('[data-order-table]');
+    if (orderTable) {
+        var selectAll = $('[data-select-all]', orderTable);
+        var bar = $('[data-bulk-bar]');
+        var countOut = $('[data-bulk-count]');
+        var clear = $('[data-bulk-clear]');
+
+        var rows = function () { return $$('[data-row-check]', orderTable); };
+
+        function sync() {
+            var boxes = rows();
+            var checked = boxes.filter(function (b) { return b.checked; });
+
+            if (countOut) countOut.textContent = checked.length;
+            if (bar) bar.hidden = checked.length === 0;
+
+            if (selectAll) {
+                selectAll.checked = boxes.length > 0 && checked.length === boxes.length;
+                // Partial selection is neither on nor off, and showing it as
+                // off invites a second click that clears everything.
+                selectAll.indeterminate = checked.length > 0 && checked.length < boxes.length;
+            }
+        }
+
+        if (selectAll) {
+            selectAll.addEventListener('change', function () {
+                rows().forEach(function (b) { b.checked = selectAll.checked; });
+                sync();
+            });
+        }
+
+        orderTable.addEventListener('change', function (e) {
+            if (e.target.matches('[data-row-check]')) sync();
+        });
+
+        if (clear) {
+            clear.addEventListener('click', function () {
+                rows().forEach(function (b) { b.checked = false; });
+                sync();
+            });
+        }
+
+        sync();
+    }
+
+    /* -----------------------------------------------------------------------
        Filter & sort
 
        The form works with its Apply button alone. Here it simply submits

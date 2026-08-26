@@ -80,6 +80,63 @@ class OrderController extends Controller
     }
 
     /**
+     * Move one or many orders to Processing — REQ-007.
+     *
+     * The single row button and the bulk bar post to THIS action, one with an
+     * array of one. Two endpoints would be two sets of rules to keep in step,
+     * and the one that gets less use is the one that drifts.
+     *
+     * The status filter is a guarded UPDATE, not a check-then-write: an order
+     * that changed underneath us (a refund, a cancellation, another admin in
+     * the next tab) is simply not matched, and the affected-row count tells us
+     * exactly how many really moved.
+     */
+    public function process(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'order_ids' => ['required', 'array', 'max:200'],
+            'order_ids.*' => ['integer'],
+        ]);
+
+        $ids = array_values(array_unique($data['order_ids']));
+
+        $moved = Order::query()
+            ->whereIn('id', $ids)
+            ->where('order_status', OrderStatus::NewOrder->value)
+            ->update([
+                'order_status' => OrderStatus::Processing->value,
+                'updated_at' => now(),
+            ]);
+
+        $skipped = count($ids) - $moved;
+
+        Log::info('Admin moved orders to processing', [
+            'requested' => count($ids),
+            'moved' => $moved,
+            'skipped' => $skipped,
+            'user_id' => $request->user()?->id,
+        ]);
+
+        if ($moved === 0) {
+            return back()->with('error', $skipped === 1
+                ? 'That order is not a new order, so it was not moved.'
+                : 'None of those orders were new orders, so nothing was moved.');
+        }
+
+        $message = $moved === 1
+            ? '1 order moved to Processing.'
+            : "{$moved} orders moved to Processing.";
+
+        if ($skipped > 0) {
+            // Never silent. A partial result an admin cannot see is a partial
+            // result they will assume was total.
+            $message .= " {$skipped} skipped — only a New Order can be moved.";
+        }
+
+        return back()->with('status', $message);
+    }
+
+    /**
      * Refunds are recorded, never processed — spec §14 lists `Refunded` as a
      * payment STATUS only, and Planning §3.2 keeps gateway refunds out of scope.
      *

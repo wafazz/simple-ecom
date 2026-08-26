@@ -101,6 +101,9 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
         Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
         Route::get('/orders/{order:id}', [OrderController::class, 'show'])->name('orders.show');
         Route::patch('/orders/{order:id}/status', [OrderController::class, 'updateStatus'])->name('orders.status');
+
+        // One action for the row button and the bulk bar alike (REQ-007).
+        Route::patch('/orders/process', [OrderController::class, 'process'])->name('orders.process');
         Route::patch('/orders/{order:id}/refund', [OrderController::class, 'markRefunded'])->name('orders.refund');
 
         // REQ-013 — spends real courier credit. POST only: never a link, so a

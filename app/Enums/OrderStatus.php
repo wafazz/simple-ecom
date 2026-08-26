@@ -55,6 +55,22 @@ enum OrderStatus: string
      *
      * @return array<int, self>
      */
+    /**
+     * May this order be advanced straight to Processing?
+     *
+     * Only a paid, unstarted order. The exclusions are the point:
+     *  - Pending is unpaid, and starting fulfilment before the money arrives
+     *    is how a store ships for free.
+     *  - NeedsReview means stock could not be allocated; it needs a decision,
+     *    not a bulk tick (Planning §7.5).
+     *  - Completed, Returned, Cancelled and InDelivery would all be moving
+     *    BACKWARDS, which a "move forward" action must never do quietly.
+     */
+    public function canStartProcessing(): bool
+    {
+        return $this === self::NewOrder;
+    }
+
     public static function selectable(): array
     {
         return array_values(array_filter(
