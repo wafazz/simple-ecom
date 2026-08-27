@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\IntegrationController;
 use App\Http\Controllers\Admin\ManualShipmentController;
 use App\Http\Controllers\Admin\OrderController;
+use App\Http\Controllers\Admin\PolicyController as AdminPolicyController;
 use App\Http\Controllers\Admin\PasswordController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\SettingController;
@@ -155,6 +156,11 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
         Route::patch('/orders/{order:id}/approve', [OrderController::class, 'approve'])->name('orders.approve');
         Route::patch('/orders/{order:id}/cancel', [OrderController::class, 'cancel'])->name('orders.cancel');
         Route::delete('/orders/{order:id}', [OrderController::class, 'destroy'])->name('orders.destroy');
+
+        // The shop's own writing, kept off the Settings screen — see
+        // Admin\PolicyController. The text still lives in `settings`.
+        Route::get('/return-policy', [AdminPolicyController::class, 'edit'])->name('policy.edit');
+        Route::put('/return-policy', [AdminPolicyController::class, 'update'])->name('policy.update');
 
         // Settings (REQ-011)
         Route::get('/settings', [SettingController::class, 'edit'])->name('settings.edit');

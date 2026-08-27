@@ -121,23 +121,22 @@ class ReturnPolicyTest extends TestCase
 
     // ----------------------------------------------------------------- admin
 
+    private function save(string $body)
+    {
+        return $this->actingAs(User::factory()->create())
+            ->put(route('admin.policy.update'), ['return_policy' => $body]);
+    }
+
     #[Test]
     public function an_admin_writes_and_replaces_the_policy(): void
     {
-        $admin = User::factory()->create();
-
-        $this->actingAs($admin)
-            ->put(route('admin.settings.update'), $this->settingsPayload([
-                'return_policy' => 'Returns accepted within 14 days.',
-            ]))
-            ->assertSessionHasNoErrors();
+        $this->save('Returns accepted within 14 days.')
+            ->assertRedirect(route('admin.policy.edit'))
+            ->assertSessionHas('status');
 
         $this->get(route('policy.returns'))->assertOk()->assertSee('within 14 days');
 
-        $this->actingAs($admin)
-            ->put(route('admin.settings.update'), $this->settingsPayload([
-                'return_policy' => 'Returns accepted within 30 days.',
-            ]));
+        $this->save('Returns accepted within 30 days.');
 
         $this->get(route('policy.returns'))
             ->assertOk()
@@ -151,33 +150,96 @@ class ReturnPolicyTest extends TestCase
         $this->publish('Returns accepted.');
         $this->get(route('policy.returns'))->assertOk();
 
-        $this->actingAs(User::factory()->create())
-            ->put(route('admin.settings.update'), $this->settingsPayload(['return_policy' => '']));
+        $this->save('')->assertSessionHas('status');
 
         $this->get(route('policy.returns'))->assertNotFound();
         $this->get(route('home'))->assertOk()->assertDontSee('Returns &amp; exchanges', false);
     }
 
     #[Test]
-    public function the_settings_screen_offers_the_editor(): void
+    public function clearing_says_the_page_is_no_longer_published(): void
+    {
+        $this->publish('Returns accepted.');
+
+        $this->save('   ');
+
+        $this->assertStringContainsString('no longer published', (string) session('status'));
+    }
+
+    #[Test]
+    public function the_policy_has_its_own_screen(): void
     {
         $this->publish('Returns accepted within 14 days.');
 
         $this->actingAs(User::factory()->create())
-            ->get(route('admin.settings.edit'))
+            ->get(route('admin.policy.edit'))
             ->assertOk()
             ->assertSee('Return &amp; exchange policy', false)
-            ->assertSee('Returns accepted within 14 days.');
+            ->assertSee('Returns accepted within 14 days.')
+            ->assertSee('Published');
+    }
+
+    #[Test]
+    public function the_screen_says_when_nothing_is_published_yet(): void
+    {
+        $this->actingAs(User::factory()->create())
+            ->get(route('admin.policy.edit'))
+            ->assertOk()
+            ->assertSee('Not published')
+            ->assertDontSee('View page');
+    }
+
+    #[Test]
+    public function the_settings_screen_no_longer_edits_the_policy(): void
+    {
+        $this->publish('Returns accepted within 14 days.');
+
+        // One place to edit it. Two would drift, and saving Settings would risk
+        // writing over writing.
+        $this->actingAs(User::factory()->create())
+            ->get(route('admin.settings.edit'))
+            ->assertOk()
+            ->assertDontSee('Returns accepted within 14 days.')
+            ->assertDontSee('name="return_policy"', false);
+    }
+
+    #[Test]
+    public function saving_settings_leaves_the_policy_alone(): void
+    {
+        $this->publish('Returns accepted within 14 days.');
+
+        $this->actingAs(User::factory()->create())
+            ->put(route('admin.settings.update'), $this->settingsPayload())
+            ->assertSessionHasNoErrors();
+
+        $this->get(route('policy.returns'))->assertOk()->assertSee('within 14 days');
+    }
+
+    #[Test]
+    public function windows_line_endings_do_not_survive_into_the_page(): void
+    {
+        $this->save("First rule.\r\n\r\nSecond rule.");
+
+        $html = $this->get(route('policy.returns'))->assertOk()->getContent();
+
+        $this->assertStringContainsString('<p>First rule.</p>', $html);
+        $this->assertStringContainsString('<p>Second rule.</p>', $html);
+        $this->assertStringNotContainsString("\r", $html);
     }
 
     #[Test]
     public function a_guest_cannot_write_the_policy(): void
     {
-        $this->put(route('admin.settings.update'), $this->settingsPayload([
-            'return_policy' => 'Anyone can write this.',
-        ]))->assertRedirect(route('admin.login'));
+        $this->put(route('admin.policy.update'), ['return_policy' => 'Anyone can write this.'])
+            ->assertRedirect(route('admin.login'));
 
         $this->get(route('policy.returns'))->assertNotFound();
+    }
+
+    #[Test]
+    public function a_guest_cannot_read_the_editor(): void
+    {
+        $this->get(route('admin.policy.edit'))->assertRedirect(route('admin.login'));
     }
 
     /**

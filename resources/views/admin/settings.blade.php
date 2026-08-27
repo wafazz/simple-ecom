@@ -50,29 +50,6 @@
                 </div>
 
                 <div class="card mb-3">
-                    <div class="card-header">Return &amp; exchange policy</div>
-                    <div class="card-body">
-                        <label for="return_policy" class="form-label visually-hidden">
-                            Return &amp; exchange policy
-                        </label>
-                        <textarea name="return_policy" id="return_policy" rows="12"
-                                  maxlength="20000"
-                                  placeholder="Items may be returned within 7 days of delivery…"
-                                  class="form-control @error('return_policy') is-invalid @enderror">{{ old('return_policy', $settings['return_policy'] ?? '') }}</textarea>
-                        @error('return_policy') <div class="invalid-feedback">{{ $message }}</div> @enderror
-
-                        <div class="form-text">
-                            Plain text. Leave a blank line between paragraphs. Published at
-                            <a href="{{ route('policy.returns') }}" target="_blank" rel="noopener">
-                                /return-policy</a>
-                            and linked in the shop footer.
-                            <strong>While this is empty the page and the link are hidden</strong> —
-                            nothing is published that you did not write.
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card mb-3">
                     <div class="card-header">Shipping origin &amp; fallback</div>
                     <div class="card-body row g-3">
                         <div class="col-12">

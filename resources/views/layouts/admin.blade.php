@@ -161,6 +161,7 @@
                             ['admin.products.index',    'admin.products.*',     'bi-box-seam', 'Products'],
                             ['admin.categories.index',  'admin.categories.*',   'bi-tags',     'Categories'],
                             ['admin.integrations.index','admin.integrations.*', 'bi-plug',     'Integrations'],
+                            ['admin.policy.edit',       'admin.policy.*',       'bi-file-text', 'Return policy'],
                             ['admin.settings.edit',     'admin.settings.*',     'bi-gear',     'Settings'],
                         ];
                     @endphp
