@@ -47,6 +47,17 @@
                                 @if ($line->variant->variationLabel() !== '')
                                     <div class="text-muted small">{{ $line->variant->variationLabel() }}</div>
                                 @endif
+                                @if ($line->nameset)
+                                    <div class="small">
+                                        <span class="badge text-bg-light">Nameset</span>
+                                        {{ trim($line->nameset['name'].' '.$line->nameset['number']) }}
+                                        @if ($line->nameset_price_minor > 0)
+                                            <span class="text-muted">
+                                                +{{ $currencySymbol }}{{ \App\Support\Money::format($line->nameset_price_minor) }} per shirt
+                                            </span>
+                                        @endif
+                                    </div>
+                                @endif
                                 <div class="text-muted small"><code>{{ $line->variant->sku }}</code></div>
 
                                 <div class="d-flex align-items-center gap-2 mt-2 flex-wrap">

@@ -33,6 +33,19 @@
                                     @if ($item->variation_label !== '')
                                         <div class="text-muted small">{{ $item->variation_label }}</div>
                                     @endif
+                                    @if ($item->hasNameset())
+                                        {{-- What the printer needs, stated plainly and
+                                             not buried in the price column. --}}
+                                        <div class="small">
+                                            <span class="badge text-bg-dark">NAMESET</span>
+                                            <strong>{{ $item->namesetLabel() }}</strong>
+                                            @if ($item->nameset_price_minor > 0)
+                                                <span class="text-muted">
+                                                    (+{{ $currencySymbol }}{{ \App\Support\Money::format($item->nameset_price_minor) }} per shirt)
+                                                </span>
+                                            @endif
+                                        </div>
+                                    @endif
                                 </td>
                                 <td class="text-muted"><code>{{ $item->sku }}</code></td>
                                 <td class="text-end">{{ $item->qty }}</td>

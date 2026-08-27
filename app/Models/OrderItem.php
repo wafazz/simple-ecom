@@ -17,6 +17,7 @@ class OrderItem extends Model
     protected $fillable = [
         'order_id', 'product_variant_id',
         'product_name', 'variation_label', 'sku',
+        'nameset_name', 'nameset_number', 'nameset_price_minor',
         'unit_price_minor', 'qty', 'line_total_minor',
     ];
 
@@ -24,9 +25,22 @@ class OrderItem extends Model
     {
         return [
             'unit_price_minor' => 'integer',
+            'nameset_price_minor' => 'integer',
             'qty' => 'integer',
             'line_total_minor' => 'integer',
         ];
+    }
+
+    /** Was a name and number printed on this line? */
+    public function hasNameset(): bool
+    {
+        return filled($this->nameset_name) || filled($this->nameset_number);
+    }
+
+    /** "AZLAN 10" — what the printer needs, in one string. */
+    public function namesetLabel(): string
+    {
+        return trim(($this->nameset_name ?? '').' '.($this->nameset_number ?? ''));
     }
 
     public function order(): BelongsTo

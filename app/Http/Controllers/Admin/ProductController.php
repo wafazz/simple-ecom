@@ -46,6 +46,7 @@ class ProductController extends Controller
         $product = DB::transaction(function () use ($request): Product {
             $product = Product::create([
                 ...$request->safe()->only(['category_id', 'name', 'slug', 'description', 'is_active']),
+                ...$this->namesetAttributes($request),
                 'image_path' => $this->storeImage($request),
             ]);
 
@@ -93,7 +94,10 @@ class ProductController extends Controller
     public function update(ProductRequest $request, Product $product): RedirectResponse
     {
         $retained = DB::transaction(function () use ($request, $product): array {
-            $attributes = $request->safe()->only(['category_id', 'name', 'slug', 'description', 'is_active']);
+            $attributes = [
+                ...$request->safe()->only(['category_id', 'name', 'slug', 'description', 'is_active']),
+                ...$this->namesetAttributes($request),
+            ];
 
             if ($path = $this->storeImage($request)) {
                 $this->deleteImage($product->image_path);
@@ -225,6 +229,23 @@ class ProductController extends Controller
             'option1_value' => '',
             'option2_name' => '',
             'option2_value' => '',
+        ];
+    }
+
+    /**
+     * The nameset switch and its fee.
+     *
+     * The price is forced to zero when the option is off, so a product cannot
+     * sit in the database advertising a fee nobody can buy — and turning the
+     * option back on later never resurrects a stale figure.
+     *
+     * @return array<string, mixed>
+     */
+    private function namesetAttributes(ProductRequest $request): array
+    {
+        return [
+            'nameset_enabled' => $request->boolean('nameset_enabled'),
+            'nameset_price_minor' => $request->namesetPriceMinor(),
         ];
     }
 

@@ -353,6 +353,27 @@
     }
 
     /* -----------------------------------------------------------------------
+       Nameset fields
+
+       The name and number are only asked for once the option is ticked. Without
+       JavaScript the fields are simply visible from the start and the form
+       still posts correctly — the server decides whether a nameset was wanted
+       from the checkbox, not from whether the boxes were shown.
+       ----------------------------------------------------------------------- */
+
+    var namesetToggle = $('[data-nameset-toggle]');
+    if (namesetToggle) {
+        var namesetFields = $('[data-nameset-fields]');
+
+        var paintNameset = function () {
+            if (namesetFields) namesetFields.hidden = !namesetToggle.checked;
+        };
+
+        namesetToggle.addEventListener('change', paintNameset);
+        paintNameset();
+    }
+
+    /* -----------------------------------------------------------------------
        Confirm before an action fires
 
        Any element carrying data-confirm asks first. Put it on the FORM for a

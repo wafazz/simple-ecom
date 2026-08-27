@@ -62,7 +62,12 @@
                     @foreach ($order->items as $item)
                         <tr>
                             <td>{{ $item->product_name }}</td>
-                            <td class="text-muted">{{ $item->variation_label }}</td>
+                            <td class="text-muted">
+                                {{ $item->variation_label }}
+                                @if ($item->hasNameset())
+                                    <div class="small">Nameset: {{ $item->namesetLabel() }}</div>
+                                @endif
+                            </td>
                             <td class="text-end">{{ $item->qty }}</td>
                             <td class="money"><x-money :minor="$item->line_total_minor" /></td>
                         </tr>

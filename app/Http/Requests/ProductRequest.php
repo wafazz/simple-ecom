@@ -42,6 +42,10 @@ class ProductRequest extends FormRequest
             'remove_images.*' => ['integer'],
             'is_active' => ['boolean'],
 
+            // Nameset: a per-product add-on, priced once for the product.
+            'nameset_enabled' => ['boolean'],
+            'nameset_price' => ['nullable', 'numeric', 'min:0', 'max:99999999', 'required_if:nameset_enabled,1'],
+
             'product_type' => ['required', Rule::in(['simple', 'variable'])],
 
             // Every product has at least one variant — price and stock live
@@ -170,5 +174,15 @@ class ProductRequest extends FormRequest
     public function priceMinorFor(array $row): int
     {
         return Money::fromDecimalString((string) ($row['price'] ?? '0'));
+    }
+
+    /** The nameset fee in sen. Zero whenever the option is switched off. */
+    public function namesetPriceMinor(): int
+    {
+        if (! $this->boolean('nameset_enabled')) {
+            return 0;
+        }
+
+        return Money::fromDecimalString((string) ($this->input('nameset_price') ?: '0'));
     }
 }

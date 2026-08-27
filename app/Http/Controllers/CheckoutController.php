@@ -100,6 +100,12 @@ class CheckoutController extends Controller
                     'product_name' => $line->variant->product->name,
                     'variation_label' => $line->variant->variationLabel(),
                     'sku' => $line->variant->sku,
+                    // Snapshotted like the price beside it: turning the option
+                    // off later, or repricing it, must not rewrite what this
+                    // customer ordered or what they were charged for it.
+                    'nameset_name' => $line->nameset['name'] ?? null,
+                    'nameset_number' => $line->nameset['number'] ?? null,
+                    'nameset_price_minor' => $line->nameset_price_minor,
                     'unit_price_minor' => $line->unit_price_minor,
                     'qty' => $line->qty,
                     'line_total_minor' => $line->line_total_minor,

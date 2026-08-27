@@ -11,13 +11,20 @@ use Illuminate\Support\Collection;
 /**
  * REQ-003 — Planning §8.
  *
- * The cart lives in the session and stores ONLY variant_id => qty. Product
- * name, variation label and price are re-read from the database on every render
- * and again at order creation, so a stale session can never carry an old price
- * into a real order.
+ * The cart lives in the session and stores variant_id => {qty, nameset}.
+ * Product name, variation label and price are re-read from the database on
+ * every render and again at order creation, so a stale session can never carry
+ * an old price into a real order — the nameset is the one thing the customer
+ * types, and even its PRICE is re-read from the product.
  *
  * Keyed by variant_id, which IS the variation identity — T-Shirt/M/Black and
  * T-Shirt/L/Black are distinct keys with no comparison logic (spec §10).
+ *
+ * ⚠ One nameset per line, because the key is the variant alone. Adding the same
+ * jersey again with a different name REPLACES it rather than making a second
+ * line, and the flash message says so. Two different names on the same size
+ * means two separate visits to the cart — a deliberate limit, not an oversight
+ * (see the scope note on the nameset feature).
  */
 class CartService
 {
@@ -25,10 +32,23 @@ class CartService
 
     public function __construct(private readonly Session $session) {}
 
-    /** @return array<int, int> variant_id => qty */
+    /**
+     * @return array<int, array{qty: int, nameset: array{name: string, number: string}|null}>
+     */
     public function raw(): array
     {
-        return $this->session->get(self::KEY, []);
+        $normalised = [];
+
+        foreach ($this->session->get(self::KEY, []) as $variantId => $line) {
+            // A session written before namesets existed holds a bare integer.
+            // Live carts must survive the deploy rather than throw on the next
+            // page load.
+            $normalised[(int) $variantId] = is_array($line)
+                ? ['qty' => (int) ($line['qty'] ?? 0), 'nameset' => $line['nameset'] ?? null]
+                : ['qty' => (int) $line, 'nameset' => null];
+        }
+
+        return $normalised;
     }
 
     public function isEmpty(): bool
@@ -39,12 +59,18 @@ class CartService
     /** Total units, for the nav badge. */
     public function count(): int
     {
-        return array_sum($this->raw());
+        return (int) array_sum(array_column($this->raw(), 'qty'));
     }
 
     public function qtyFor(int $variantId): int
     {
-        return $this->raw()[$variantId] ?? 0;
+        return $this->raw()[$variantId]['qty'] ?? 0;
+    }
+
+    /** @return array{name: string, number: string}|null */
+    public function namesetFor(int $variantId): ?array
+    {
+        return $this->raw()[$variantId]['nameset'] ?? null;
     }
 
     /**
@@ -53,7 +79,7 @@ class CartService
      *
      * @return int the resulting quantity for that line (0 if nothing could be added)
      */
-    public function add(ProductVariant $variant, int $qty): int
+    public function add(ProductVariant $variant, int $qty, ?array $nameset = null): int
     {
         $requested = $this->qtyFor($variant->id) + max(1, $qty);
         $resulting = min($requested, $variant->stock_qty);
@@ -62,7 +88,9 @@ class CartService
             return 0;
         }
 
-        $this->write($variant->id, $resulting);
+        // Passing null keeps whatever the line already had, so adding a second
+        // shirt does not quietly wipe the name off the first.
+        $this->write($variant->id, $resulting, $nameset ?? $this->namesetFor($variant->id));
 
         return $resulting;
     }
@@ -76,7 +104,7 @@ class CartService
             return;
         }
 
-        $this->write($variant->id, min($qty, $variant->stock_qty));
+        $this->write($variant->id, min($qty, $variant->stock_qty), $this->namesetFor($variant->id));
     }
 
     public function remove(int $variantId): void
@@ -124,16 +152,29 @@ class CartService
 
         return $variants->map(function (ProductVariant $variant) use ($cart): object {
             // Clamp to current stock: it may have fallen since this was added.
-            $qty = min($cart[$variant->id], $variant->stock_qty);
+            $qty = min($cart[$variant->id]['qty'], $variant->stock_qty);
+
+            // The name is the customer's, but the FEE is the product's, re-read
+            // here like every other price. A nameset held in a session from
+            // before a price change, or from a product that has since turned
+            // the option off, is dropped rather than honoured.
+            $nameset = $variant->product->offersNameset()
+                ? $cart[$variant->id]['nameset']
+                : null;
+
+            $namesetPriceMinor = $nameset !== null ? (int) $variant->product->nameset_price_minor : 0;
 
             return (object) [
                 'variant' => $variant,
                 'qty' => $qty,
                 'unit_price_minor' => $variant->price_minor,
-                'line_total_minor' => Money::lineTotal($variant->price_minor, $qty),
+                'nameset' => $nameset,
+                'nameset_price_minor' => $namesetPriceMinor,
+                // Per shirt: two of the same jersey are two prints.
+                'line_total_minor' => Money::lineTotal($variant->price_minor + $namesetPriceMinor, $qty),
                 'stock_qty' => $variant->stock_qty,
                 'in_stock' => $variant->stock_qty > 0,
-                'reduced' => $qty < $cart[$variant->id],
+                'reduced' => $qty < $cart[$variant->id]['qty'],
             ];
         })->values();
     }
@@ -157,10 +198,11 @@ class CartService
         );
     }
 
-    private function write(int $variantId, int $qty): void
+    /** @param  array{name: string, number: string}|null  $nameset */
+    private function write(int $variantId, int $qty, ?array $nameset = null): void
     {
         $cart = $this->raw();
-        $cart[$variantId] = $qty;
+        $cart[$variantId] = ['qty' => $qty, 'nameset' => $nameset];
         $this->session->put(self::KEY, $cart);
     }
 }

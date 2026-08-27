@@ -126,6 +126,58 @@
                             </select>
                         </div>
 
+                        @if ($product->offersNameset())
+                            {{-- Shown only when the product offers it. The server
+                                 checks the product again before pricing anything,
+                                 so a posted nameset on any other product is
+                                 dropped rather than charged. --}}
+                            <div class="option-group" data-nameset>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="nameset"
+                                           value="1" id="nameset" data-nameset-toggle
+                                           @checked(old('nameset'))>
+                                    <label class="form-check-label" for="nameset">
+                                        Add nameset
+                                        @if ($product->nameset_price_minor > 0)
+                                            <span class="text-muted">
+                                                (+{{ $currencySymbol }}{{ \App\Support\Money::format($product->nameset_price_minor) }} per shirt)
+                                            </span>
+                                        @endif
+                                    </label>
+                                </div>
+
+                                {{-- No hidden attribute and NOT .js-hidden: that class
+                                     is switched off by a script which runs after
+                                     app.js and would force these shut again. app.js
+                                     hides them itself, so a JS failure leaves the
+                                     fields visible and the form usable. --}}
+                                <div class="row g-2 mt-1" data-nameset-fields>
+                                    <div class="col-8">
+                                        <label for="nameset_name" class="form-label small mb-1">Name</label>
+                                        <input type="text" name="nameset_name" id="nameset_name"
+                                               maxlength="20" placeholder="AZLAN" autocomplete="off"
+                                               class="form-control text-uppercase @error('nameset_name') is-invalid @enderror"
+                                               value="{{ old('nameset_name') }}">
+                                        @error('nameset_name')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                    </div>
+                                    <div class="col-4">
+                                        <label for="nameset_number" class="form-label small mb-1">Number</label>
+                                        <input type="text" name="nameset_number" id="nameset_number"
+                                               maxlength="3" inputmode="numeric" placeholder="10" autocomplete="off"
+                                               class="form-control @error('nameset_number') is-invalid @enderror"
+                                               value="{{ old('nameset_number') }}">
+                                        @error('nameset_number')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                    </div>
+                                    <div class="col-12">
+                                        <p class="form-text mb-0">
+                                            Printed exactly as typed, in capitals. Check the spelling —
+                                            a printed shirt cannot be returned.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
+
                         <div class="d-flex align-items-center gap-3 mb-3">
                             <div class="qty">
                                 <button type="button" data-qty-step="-1" aria-label="Decrease quantity">−</button>

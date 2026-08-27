@@ -29,6 +29,16 @@ class CartController extends Controller
         $data = $request->validate([
             'variant_id' => ['required', 'integer'],
             'qty' => ['nullable', 'integer', 'min:1', 'max:100'],
+
+            // Nameset. Accepted here, but only kept if the PRODUCT offers it —
+            // see namesetFrom(). A posted nameset on a product without the
+            // option is dropped, never priced.
+            'nameset' => ['nullable', 'boolean'],
+            'nameset_name' => ['nullable', 'string', 'max:20', 'regex:/^[A-Za-z0-9 .\'-]+$/'],
+            'nameset_number' => ['nullable', 'string', 'max:3', 'regex:/^[0-9]+$/'],
+        ], [
+            'nameset_name.regex' => 'The name may only contain letters, numbers, spaces, full stops, hyphens and apostrophes.',
+            'nameset_number.regex' => 'The number may only contain digits.',
         ]);
 
         // Re-resolved from the database and checked for sellability. The posted
@@ -45,7 +55,10 @@ class CartController extends Controller
 
         $requested = (int) ($data['qty'] ?? 1);
         $before = $this->cart->qtyFor($variant->id);
-        $resulting = $this->cart->add($variant, $requested);
+        $previousNameset = $this->cart->namesetFor($variant->id);
+        $nameset = $this->namesetFrom($data, $variant);
+
+        $resulting = $this->cart->add($variant, $requested, $nameset);
 
         if ($resulting === 0) {
             return $this->added($request, 'That item is out of stock.', ok: false);
@@ -54,9 +67,20 @@ class CartController extends Controller
         $label = trim($variant->product->name.' '.$variant->variationLabel());
         $capped = $resulting < $before + $requested;
 
-        return $this->added($request, $capped
+        $message = $capped
             ? "Added {$label}. Only {$resulting} available, so the quantity was capped."
-            : "Added {$label} to your cart.");
+            : "Added {$label} to your cart.";
+
+        // One nameset per line. Say plainly when a new one has taken the place
+        // of an old one, rather than letting the change go unnoticed.
+        if ($nameset !== null && $previousNameset !== null && $nameset !== $previousNameset) {
+            $message .= ' The nameset on that line is now '
+                .trim($nameset['name'].' '.$nameset['number']).'.';
+        } elseif ($nameset !== null) {
+            $message .= ' Nameset: '.trim($nameset['name'].' '.$nameset['number']).'.';
+        }
+
+        return $this->added($request, $message);
     }
 
     /**
@@ -106,6 +130,35 @@ class CartController extends Controller
         $this->cart->remove($variant);
 
         return back()->with('status', 'Item removed.');
+    }
+
+    /**
+     * The nameset to store, or null.
+     *
+     * Gated on the PRODUCT, not on the request: a hand-made form posting a
+     * nameset for a product that does not offer one would otherwise put an
+     * unpriced instruction in front of whoever packs the parcel. A ticked box
+     * with neither field filled in is also nothing.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array{name: string, number: string}|null
+     */
+    private function namesetFrom(array $data, ProductVariant $variant): ?array
+    {
+        if (! ($data['nameset'] ?? false) || ! $variant->product->offersNameset()) {
+            return null;
+        }
+
+        // Jerseys are printed in capitals; storing them that way means the
+        // order, the cart and the print sheet all read the same.
+        $name = mb_strtoupper(trim((string) ($data['nameset_name'] ?? '')));
+        $number = trim((string) ($data['nameset_number'] ?? ''));
+
+        if ($name === '' && $number === '') {
+            return null;
+        }
+
+        return ['name' => $name, 'number' => $number];
     }
 
     private function sellableVariant(int $variantId): ?ProductVariant

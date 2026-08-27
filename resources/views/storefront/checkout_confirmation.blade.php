@@ -23,6 +23,9 @@
                             @if ($item->variation_label !== '')
                                 <span class="text-muted small">({{ $item->variation_label }})</span>
                             @endif
+                            @if ($item->hasNameset())
+                                <div class="text-muted small">Nameset: {{ $item->namesetLabel() }}</div>
+                            @endif
                             <span class="text-muted small">× {{ $item->qty }}</span>
                         </td>
                         <td class="money"><x-money :minor="$item->line_total_minor" /></td>

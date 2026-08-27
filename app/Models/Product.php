@@ -14,11 +14,22 @@ class Product extends Model
 
     protected $fillable = [
         'category_id', 'name', 'slug', 'description', 'image_path', 'is_active',
+        'nameset_enabled', 'nameset_price_minor',
     ];
 
     protected function casts(): array
     {
-        return ['is_active' => 'boolean'];
+        return [
+            'is_active' => 'boolean',
+            'nameset_enabled' => 'boolean',
+            'nameset_price_minor' => 'integer',
+        ];
+    }
+
+    /** Can a name and number be printed on this product? */
+    public function offersNameset(): bool
+    {
+        return $this->nameset_enabled === true;
     }
 
     public function category(): BelongsTo

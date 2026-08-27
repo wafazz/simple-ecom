@@ -104,6 +104,11 @@
                                         @if ($line->variant->variationLabel() !== '')
                                             <span class="text-muted small">({{ $line->variant->variationLabel() }})</span>
                                         @endif
+                                        @if ($line->nameset)
+                                            <div class="text-muted small">
+                                                Nameset: {{ trim($line->nameset['name'].' '.$line->nameset['number']) }}
+                                            </div>
+                                        @endif
                                         <span class="text-muted small">× {{ $line->qty }}</span>
                                     </td>
                                     <td class="money"><x-money :minor="$line->line_total_minor" /></td>

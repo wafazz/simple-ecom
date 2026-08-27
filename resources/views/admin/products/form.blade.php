@@ -109,6 +109,35 @@
                                @checked(old('is_active', $product->is_active ?? true))>
                         <label for="is_active" class="form-check-label">Active</label>
                     </div>
+
+                    <hr class="my-3">
+
+                    {{-- Nameset: a per-product add-on. Priced once for the
+                         product, because printing a name costs the same
+                         whichever size is bought. --}}
+                    <div class="form-check">
+                        <input type="hidden" name="nameset_enabled" value="0">
+                        <input type="checkbox" name="nameset_enabled" id="nameset_enabled" value="1"
+                               class="form-check-input"
+                               @checked(old('nameset_enabled', $product->nameset_enabled ?? false))>
+                        <label for="nameset_enabled" class="form-check-label">
+                            Offer nameset (name &amp; number printing)
+                        </label>
+                    </div>
+
+                    <div class="mt-2">
+                        <label for="nameset_price" class="form-label">Nameset price</label>
+                        <div class="input-group">
+                            <span class="input-group-text">{{ $currencySymbol }}</span>
+                            <input type="text" name="nameset_price" id="nameset_price"
+                                   inputmode="decimal" placeholder="0.00"
+                                   value="{{ old('nameset_price', isset($product) && $product->nameset_price_minor
+                                        ? \App\Support\Money::format($product->nameset_price_minor) : '') }}"
+                                   class="form-control @error('nameset_price') is-invalid @enderror">
+                            @error('nameset_price')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                        </div>
+                        <div class="form-text">Charged per shirt, on top of the variation price.</div>
+                    </div>
                 </div>
             </div>
         </div>
