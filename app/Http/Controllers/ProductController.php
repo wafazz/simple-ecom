@@ -152,7 +152,9 @@ class ProductController extends Controller
                 'id' => $v->id,
                 'option1' => $v->option1_value,
                 'option2' => $v->option2_value,
-                'price' => Money::display($v->price_minor),
+                // Symbol-free: the template prints it once, outside the span
+                // this value is written into.
+                'price' => Money::format($v->price_minor),
                 'stock' => $v->stock_qty,
                 'sku' => $v->sku,
             ])->values()->all(),

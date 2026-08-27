@@ -170,7 +170,7 @@
                             <tr>
                                 <th>Courier charged</th>
                                 <td>
-                                    {{ $currencySymbol }}{{ \App\Support\Money::display($order->shipment->cost_minor) }}
+                                    {{ $currencySymbol }}{{ \App\Support\Money::format($order->shipment->cost_minor) }}
                                     @if ($order->shipment->cost_minor > $order->shipping_fee_minor)
                                         <span class="badge text-bg-warning ms-1">above what the customer paid</span>
                                     @endif

@@ -52,7 +52,10 @@
                 <h1>{{ $product->name }}</h1>
 
                 <p class="buy-panel__price mb-1">
-                    {{ $currencySymbol }}<span data-variant-price>{{ \App\Support\Money::display($variants->min('price_minor')) }}</span>
+                    {{-- format(), not display(): display() carries its own "RM", and the
+                         symbol is printed OUTSIDE the span so the picker can swap the
+                         number without having to know the currency. --}}
+                    {{ $currencySymbol }}<span data-variant-price>{{ \App\Support\Money::format($variants->min('price_minor')) }}</span>
                 </p>
 
                 @if ($product->description)
@@ -116,7 +119,7 @@
                                          read either. --}}
                                     <option value="{{ $variant->id }}" @disabled($variant->stock_qty < 1)>
                                         {{ $variant->variationLabel() !== '' ? $variant->variationLabel() : $variant->sku }}
-                                        — {{ $currencySymbol }}{{ \App\Support\Money::display($variant->price_minor) }}
+                                        — {{ $currencySymbol }}{{ \App\Support\Money::format($variant->price_minor) }}
                                         · {{ $variant->stock_qty < 1 ? 'Out of stock' : 'In stock' }}
                                     </option>
                                 @endforeach
