@@ -157,6 +157,7 @@
 
                     @php
                         $rest = [
+                            ['admin.slides.index',      'admin.slides.*',       'bi-images',   'Banners'],
                             ['admin.products.index',    'admin.products.*',     'bi-box-seam', 'Products'],
                             ['admin.categories.index',  'admin.categories.*',   'bi-tags',     'Categories'],
                             ['admin.integrations.index','admin.integrations.*', 'bi-plug',     'Integrations'],

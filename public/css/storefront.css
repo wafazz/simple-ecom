@@ -905,3 +905,145 @@ td.money, th.money { text-align: right; }
     .hero { padding: 1.9rem 1.4rem; }
     .toast-stack { left: 1rem; right: 1rem; max-width: none; }
 }
+
+/* --------------------------------------------------------------------------
+   Hero slider — admin-managed banners.
+
+   The picture is a BACKDROP behind real text, not a flattened graphic with
+   wording baked in: type stays sharp at any width, reflows on a phone, and is
+   readable by a search engine.
+
+   min-height rather than a fixed aspect-ratio, because the words are what must
+   never be clipped. The frame grows with the viewport, the image is cropped to
+   fit it by object-fit, and long copy on a narrow screen simply makes the band
+   taller instead of overflowing it.
+   -------------------------------------------------------------------------- */
+
+.hero-slider {
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--radius-lg);
+    margin-bottom: 3rem;
+    background: var(--surface);
+}
+
+.hero-slider .slide {
+    position: relative;
+    display: flex;
+    align-items: center;
+    min-height: clamp(20rem, 34vw, 33.75rem);
+    padding: clamp(1.9rem, 5vw, 4.2rem);
+}
+
+.slide__img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    /* object-position is set per slide from the admin's focal choice. */
+}
+
+/* Legibility is not optional: the admin can upload any picture, and dark text
+   on an unknown photograph is a coin toss. The wash is strongest where the
+   words are and clears the far side, so the artwork still reads. */
+.slide__scrim {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        100deg,
+        rgb(255 255 255 / .94) 0%,
+        rgb(255 255 255 / .88) 34%,
+        rgb(255 255 255 / .45) 62%,
+        rgb(255 255 255 / .12) 100%
+    );
+}
+
+.hero-slider .slide__inner {
+    position: relative;
+    z-index: 1;
+    max-width: 34rem;
+}
+
+.hero-slider .slide__inner h1 {
+    font-size: clamp(2.1rem, 5.4vw, 3.4rem);
+    line-height: 1.06;
+    margin: .6rem 0 1rem;
+}
+
+.hero-slider .slide__inner p {
+    color: var(--ink-soft);
+    font-size: 1.05rem;
+    margin-bottom: 1.6rem;
+    max-width: 30rem;
+}
+
+/* Bootstrap's controls are white-on-white here. Give them a disc so they are
+   visible over pale artwork, and keep them off the wording. */
+.hero-slider .carousel-control-prev,
+.hero-slider .carousel-control-next {
+    width: auto;
+    padding: 0 clamp(.4rem, 1.5vw, 1rem);
+    opacity: 1;
+}
+
+.hero-slider .carousel-control-prev-icon,
+.hero-slider .carousel-control-next-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+    padding: .7rem;
+    border-radius: 50%;
+    background-color: rgb(255 255 255 / .82);
+    box-shadow: 0 1px 6px rgb(0 0 0 / .16);
+    filter: invert(1) grayscale(1) brightness(.35);
+}
+
+.hero-slider .carousel-indicators {
+    margin-bottom: .85rem;
+}
+
+.hero-slider .carousel-indicators [data-bs-target] {
+    width: .55rem;
+    height: .55rem;
+    border-radius: 50%;
+    border: 0;
+    background-color: var(--shop-accent, #14685a);
+    opacity: .3;
+}
+
+.hero-slider .carousel-indicators .active { opacity: 1; }
+
+.hero-slider :is(.carousel-control-prev, .carousel-control-next, .carousel-indicators button):focus-visible {
+    outline: 3px solid var(--shop-accent, #14685a);
+    outline-offset: 3px;
+}
+
+@media (max-width: 767.98px) {
+    /* Taller and narrower: a wide banner cropped to a phone keeps only its
+       middle, so the band needs the height to stay a picture rather than a
+       stripe. The scrim turns bottom-up, because the text sits low here. */
+    .hero-slider .slide {
+        min-height: 26rem;
+        align-items: flex-end;
+    }
+
+    .slide__scrim {
+        background: linear-gradient(
+            to top,
+            rgb(255 255 255 / .96) 0%,
+            rgb(255 255 255 / .9) 42%,
+            rgb(255 255 255 / .5) 72%,
+            rgb(255 255 255 / .15) 100%
+        );
+    }
+
+    .hero-slider .carousel-indicators { margin-bottom: .35rem; }
+}
+
+/* A carousel that moves on its own is a problem for anyone who asked the system
+   to stop animating. Bootstrap keeps cycling, so remove the motion instead. */
+@media (prefers-reduced-motion: reduce) {
+    .hero-slider .carousel-item {
+        transition: none !important;
+    }
+}

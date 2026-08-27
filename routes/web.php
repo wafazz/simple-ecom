@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\PasswordController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\ShipmentController;
+use App\Http\Controllers\Admin\SlideController;
 use App\Http\Controllers\Admin\VariationController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
@@ -97,6 +98,15 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
         Route::get('/products/{product:id}/edit', [AdminProductController::class, 'edit'])->name('products.edit');
         Route::put('/products/{product:id}', [AdminProductController::class, 'update'])->name('products.update');
         Route::patch('/products/{product:id}/toggle', [AdminProductController::class, 'toggle'])->name('products.toggle');
+
+        // Home page banners.
+        Route::get('/slides', [SlideController::class, 'index'])->name('slides.index');
+        Route::get('/slides/create', [SlideController::class, 'create'])->name('slides.create');
+        Route::post('/slides', [SlideController::class, 'store'])->name('slides.store');
+        Route::get('/slides/{slide}/edit', [SlideController::class, 'edit'])->name('slides.edit');
+        Route::put('/slides/{slide}', [SlideController::class, 'update'])->name('slides.update');
+        Route::patch('/slides/{slide}/toggle', [SlideController::class, 'toggle'])->name('slides.toggle');
+        Route::delete('/slides/{slide}', [SlideController::class, 'destroy'])->name('slides.destroy');
 
         // Orders (REQ-007)
         Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
