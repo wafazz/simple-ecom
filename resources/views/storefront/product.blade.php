@@ -70,7 +70,7 @@
                          data-low-stock="{{ $lowStock }}"
                          data-variants='@json($variantData)'>
 
-                        @if ($option1Name !== '' && $option1Values !== [])
+                        @if ($useSwatches && $option1Name !== '' && $option1Values !== [])
                             <div class="option-group">
                                 <p class="option-group__label">
                                     {{ $option1Name }}
@@ -85,7 +85,7 @@
                             </div>
                         @endif
 
-                        @if ($option2Name !== '' && $option2Values !== [])
+                        @if ($useSwatches && $option2Name !== '' && $option2Values !== [])
                             <div class="option-group">
                                 <p class="option-group__label">
                                     {{ $option2Name }}
@@ -102,7 +102,10 @@
 
                         {{-- The submitted value, always. app.js sets it from the
                              swatches; with JS off the customer picks it here. --}}
-                        <div class="option-group @if ($option1Name !== '') js-hidden @endif">
+                        {{-- Hidden only when the swatches above can reach every
+                             variant. When they cannot, this is the ONLY control
+                             that can, so it stays on screen. --}}
+                        <div class="{{ $useSwatches ? 'option-group js-hidden' : 'option-group' }}">
                             <label class="option-group__label" for="variant_id">Variation</label>
                             <select name="variant_id" id="variant_id" class="form-select"
                                     data-variant-select required>

@@ -250,7 +250,17 @@
                 && (chosen[2] === null || v.option2 === chosen[2]);
         }
 
+        /* With no swatches on the page the <select> IS the picker, and the
+           swatch state would never resolve — leaving Add to cart disabled on a
+           product whose only control was working perfectly. */
+        var hasSwatches = $$('.swatch', picker).length > 0;
+
         function current() {
+            if (!hasSwatches) {
+                var id = select ? parseInt(select.value, 10) : NaN;
+                return variants.filter(function (v) { return v.id === id; })[0] || null;
+            }
+
             var found = variants.filter(matches);
             return found.length === 1 ? found[0] : null;
         }
@@ -330,6 +340,8 @@
             chosen[axis] = chosen[axis] === sw.dataset.value ? null : sw.dataset.value;
             paint();
         });
+
+        if (select) select.addEventListener('change', paint);
 
         // A single-variant product has nothing to choose — select it outright.
         if (variants.length === 1) {

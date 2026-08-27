@@ -7,6 +7,7 @@ use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Support\Money;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\View\View;
 
 /** REQ-001 / REQ-002 — storefront catalogue. */
@@ -81,6 +82,42 @@ class ProductController extends Controller
         ]);
     }
 
+    /**
+     * The label for an option axis, from whichever variant actually names it.
+     *
+     * @param  Collection<int, ProductVariant>  $variants
+     */
+    private function axisName($variants, int $axis): string
+    {
+        return (string) $variants->pluck("option{$axis}_name")->filter()->first();
+    }
+
+    /**
+     * Can the swatch grid express every variant of this product?
+     *
+     * Only when each variant carries a value on each axis the grid would draw.
+     * One row with a blank option leaves a variant no swatch can select, and a
+     * picker that cannot reach a variant must not be the only way to buy.
+     *
+     * @param  Collection<int, ProductVariant>  $variants
+     */
+    private function swatchesCanRepresent($variants): bool
+    {
+        foreach ([1, 2] as $axis) {
+            if ($this->axisName($variants, $axis) === '') {
+                continue;
+            }
+
+            foreach ($variants as $variant) {
+                if ((string) $variant->{"option{$axis}_value"} === '') {
+                    return false;
+                }
+            }
+        }
+
+        return $this->axisName($variants, 1) !== '';
+    }
+
     /** The top of the price slider — the dearest thing actually on sale. */
     private function priceCeilingMinor(): int
     {
@@ -119,10 +156,20 @@ class ProductController extends Controller
                 'stock' => $v->stock_qty,
                 'sku' => $v->sku,
             ])->values()->all(),
-            'option1Name' => $variants->first()->option1_name,
-            'option2Name' => $variants->first()->option2_name,
+            // Taken from ANY variant carrying a name, not from first(). The
+            // set is ordered by option value, so a row with a blank second
+            // option sorts first — and reading the name off that row hid the
+            // whole axis, leaving every one of its variants unreachable.
+            'option1Name' => $this->axisName($variants, 1),
+            'option2Name' => $this->axisName($variants, 2),
             'option1Values' => $variants->pluck('option1_value')->unique()->filter()->values()->all(),
             'option2Values' => $variants->pluck('option2_value')->unique()->filter()->values()->all(),
+
+            // Swatches can only represent variants that carry a value on every
+            // axis drawn. A half-filled axis makes some combination unnameable,
+            // and the plain <select> — which lists every variant, always — is
+            // the honest fallback.
+            'useSwatches' => $this->swatchesCanRepresent($variants),
         ]);
     }
 }
