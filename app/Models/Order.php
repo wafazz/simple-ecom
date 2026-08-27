@@ -81,7 +81,42 @@ class Order extends Model
     /** Is there a label an admin can actually print? */
     public function hasLabel(): bool
     {
-        return filled($this->shipment?->label_url);
+        return $this->shipment?->labelUrl() !== null;
+    }
+
+    /**
+     * May an admin key an AWB in by hand for this order?
+     *
+     * Deliberately NOT the same window as canBookShipment(). Typing an AWB
+     * spends nothing, so it stays available once the parcel is already out —
+     * an admin who moved the order to In Delivery before recording the number
+     * must still be able to record it, and to fix a typo afterwards.
+     *
+     * The hard rule is the last one: a shipment that was really booked through
+     * EasyParcel has been paid for out of the store's credit, and hand-editing
+     * its courier or AWB would leave the row disagreeing with what the carrier
+     * actually holds. Manual entry may only create a row, replace one it
+     * created itself, or replace one that provably charged nothing.
+     */
+    public function canEnterAwbManually(): bool
+    {
+        if ($this->payment_status !== PaymentStatus::Paid) {
+            return false;
+        }
+
+        if (! in_array($this->order_status, [
+            OrderStatus::NewOrder,
+            OrderStatus::Processing,
+            OrderStatus::InDelivery,
+        ], true)) {
+            return false;
+        }
+
+        $shipment = $this->shipment;
+
+        return $shipment === null
+            || $shipment->isManual()
+            || $shipment->status->isRetryable();
     }
 
     public function shipment(): HasOne

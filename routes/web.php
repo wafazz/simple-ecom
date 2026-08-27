@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\IntegrationController;
+use App\Http\Controllers\Admin\ManualShipmentController;
 use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\PasswordController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
@@ -120,6 +121,17 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
 
         // Read-only: lists the AWBs already issued for printing.
         Route::get('/orders/awb', [ShipmentController::class, 'labels'])->name('orders.awb');
+
+        // Manual fulfilment, for while EasyParcel is on hold. Spends nothing
+        // and calls no third party — it records what the admin already did.
+        Route::post('/orders/{order:id}/awb', [ManualShipmentController::class, 'store'])
+            ->name('orders.awb.store');
+
+        // An uploaded label is customer PII (name, address, phone), so it is
+        // never a public file — it is streamed from a private disk through
+        // this authenticated route.
+        Route::get('/orders/{order:id}/awb/label', [ManualShipmentController::class, 'label'])
+            ->name('orders.awb.label');
 
         Route::get('/orders/{order:id}', [OrderController::class, 'show'])->name('orders.show');
         Route::patch('/orders/{order:id}/status', [OrderController::class, 'updateStatus'])->name('orders.status');

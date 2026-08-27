@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\Courier;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Services\EasyParcelService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -48,6 +50,9 @@ class OrderController extends Controller
             'needsReviewCount' => Order::query()
                 ->where('order_status', OrderStatus::NeedsReview->value)
                 ->count(),
+
+            // One lookup for the page, not one per row.
+            'easyparcelConnected' => EasyParcelService::fromConfig()->isConnected(),
         ]);
     }
 
@@ -55,6 +60,13 @@ class OrderController extends Controller
     {
         return view('admin.orders.show', [
             'order' => $order->load(['items', 'payment', 'shipment']),
+
+            // Booking is offered only when EasyParcel could actually carry it
+            // out. While the integration is on hold the button is visibly
+            // disabled rather than removed, so the admin can see that the path
+            // exists and why it is unavailable.
+            'easyparcelConnected' => EasyParcelService::fromConfig()->isConnected(),
+            'couriers' => Courier::options(),
         ]);
     }
 

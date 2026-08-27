@@ -48,6 +48,21 @@ return [
             'throw' => false,
         ],
 
+        // Uploaded airway bills. PRIVATE, unlike 'uploads': a label carries the
+        // customer's name, address and phone, so it must never be fetchable by
+        // URL. Served only through an authenticated admin route.
+        //
+        // 'throw' => true on purpose. The uploads disk's silent-failure default
+        // produced a bare 500 on a live VPS once already (ProductController
+        // ::storeImage) — here a failed write raises and is turned into a
+        // validation error the admin can act on.
+        'awb' => [
+            'driver' => 'local',
+            'root' => storage_path('app/private/awb'),
+            'visibility' => 'private',
+            'throw' => true,
+        ],
+
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),

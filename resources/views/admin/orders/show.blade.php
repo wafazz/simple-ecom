@@ -195,8 +195,8 @@
                                 <a href="{{ $shipment->tracking_url }}" target="_blank" rel="noopener noreferrer"
                                    class="small">Track parcel</a>
                             @endif
-                            @if ($shipment->label_url)
-                                <a href="{{ $shipment->label_url }}" target="_blank" rel="noopener noreferrer"
+                            @if ($shipment->labelUrl())
+                                <a href="{{ $shipment->labelUrl() }}" target="_blank" rel="noopener noreferrer"
                                    class="small">Print AWB label</a>
                             @elseif ($order->hasAwb())
                                 <a href="{{ route('admin.orders.awb', ['order_ids' => [$order->id]]) }}"
@@ -233,15 +233,101 @@
                                  there: what the customer paid is a weight-table
                                  figure, not a courier product, so the order
                                  cannot supply one. --}}
-                            <a href="{{ route('admin.orders.book', ['order_ids' => [$order->id]]) }}"
-                               class="btn btn-shop btn-sm mt-2">
-                                <i class="bi bi-truck me-1"></i>Book courier…
-                            </a>
-                            <div class="form-text">
-                                Shows the courier quotes for this address first. Nothing is
-                                charged until you confirm there.
-                            </div>
+                            @if ($easyparcelConnected)
+                                <a href="{{ route('admin.orders.book', ['order_ids' => [$order->id]]) }}"
+                                   class="btn btn-shop btn-sm mt-2">
+                                    <i class="bi bi-truck me-1"></i>Book courier…
+                                </a>
+                                <div class="form-text">
+                                    Shows the courier quotes for this address first. Nothing is
+                                    charged until you confirm there.
+                                </div>
+                            @else
+                                {{-- Disabled, not hidden: a missing button reads as a
+                                     broken page, a disabled one with a reason reads as a
+                                     decision. <a> ignores the disabled attribute, so this
+                                     is a real <button> and cannot be clicked or tabbed
+                                     into. --}}
+                                <button type="button" class="btn btn-shop btn-sm mt-2" disabled
+                                        aria-describedby="ep-offline">
+                                    <i class="bi bi-truck me-1"></i>Book courier…
+                                </button>
+                                <div class="form-text" id="ep-offline">
+                                    EasyParcel is not connected, so nothing can be booked
+                                    through it. Record the AWB by hand below, or
+                                    <a href="{{ route('admin.integrations.index') }}">connect
+                                    EasyParcel</a>.
+                                </div>
+                            @endif
                         @endif
+                    @endif
+
+                    @if ($order->canEnterAwbManually())
+                        @php($manual = \App\Enums\Courier::tryFromLabel($shipment?->courier_name))
+
+                        <hr class="my-3">
+
+                        <form method="POST" enctype="multipart/form-data"
+                              action="{{ route('admin.orders.awb.store', $order) }}">
+                            @csrf
+
+                            <div class="d-flex align-items-baseline justify-content-between mb-2">
+                                <strong class="small">
+                                    {{ $shipment?->isManual() ? 'Update the AWB' : 'Enter AWB manually' }}
+                                </strong>
+                                <span class="text-muted small">Books nothing — records what you already did</span>
+                            </div>
+
+                            <div class="mb-2">
+                                <label for="courier" class="form-label small mb-1">Courier</label>
+                                <select name="courier" id="courier" required
+                                        class="form-select form-select-sm @error('courier') is-invalid @enderror">
+                                    <option value="">Choose a courier…</option>
+                                    @foreach ($couriers as $value => $label)
+                                        <option value="{{ $value }}"
+                                                @selected(old('courier', $manual?->value) === $value)>{{ $label }}</option>
+                                    @endforeach
+                                </select>
+                                @error('courier')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                            </div>
+
+                            <div class="mb-2">
+                                <label for="awb_no" class="form-label small mb-1">AWB number</label>
+                                <input type="text" name="awb_no" id="awb_no" required maxlength="64"
+                                       value="{{ old('awb_no', $shipment?->isManual() ? $shipment->awb_no : '') }}"
+                                       placeholder="e.g. NVMY000123456789"
+                                       class="form-control form-control-sm @error('awb_no') is-invalid @enderror">
+                                @error('awb_no')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                            </div>
+
+                            <div class="mb-2">
+                                <label for="awb_file" class="form-label small mb-1">
+                                    AWB label <span class="text-muted fw-normal">(optional)</span>
+                                </label>
+                                <input type="file" name="awb_file" id="awb_file"
+                                       accept=".pdf,.jpg,.jpeg,.png"
+                                       class="form-control form-control-sm @error('awb_file') is-invalid @enderror">
+                                @error('awb_file')<div class="invalid-feedback">{{ $message }}</div>@enderror
+
+                                <div class="form-text">
+                                    PDF, JPG or PNG, up to 8 MB.
+                                    @if (filled($shipment?->label_path))
+                                        A label is already stored —
+                                        <a href="{{ route('admin.orders.awb.label', $order) }}"
+                                           target="_blank" rel="noopener noreferrer">view it</a>.
+                                        Uploading another replaces it.
+                                    @endif
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn btn-shop btn-sm">
+                                <i class="bi bi-upc-scan me-1"></i>Save AWB
+                            </button>
+                            <div class="form-text">
+                                The order status is not changed — move it to In Delivery yourself
+                                when the parcel is collected.
+                            </div>
+                        </form>
                     @endif
                 </div>
             </div>

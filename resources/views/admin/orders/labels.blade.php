@@ -4,9 +4,10 @@
 
 @section('content')
     <p class="text-muted">
-        Labels are PDFs hosted by EasyParcel, so this page links to them rather than
-        embedding them — a bundled preview here would print blank. Open them all,
-        then print from your PDF viewer.
+        Labels are files rather than page content — either a PDF on EasyParcel's own
+        domain, or one uploaded here for a manually fulfilled order. This page links
+        to them rather than embedding them, since a bundled preview would print blank.
+        Open them all, then print from your PDF viewer.
     </p>
 
     <div class="mb-3 d-print-none">
@@ -59,7 +60,7 @@
                         <td><code>{{ $order->shipment->awb_no }}</code></td>
                         <td class="text-end d-print-none">
                             @if ($order->hasLabel())
-                                <a href="{{ $order->shipment->label_url }}" target="_blank"
+                                <a href="{{ $order->shipment->labelUrl() }}" target="_blank"
                                    rel="noopener noreferrer" class="btn btn-sm btn-outline-primary"
                                    data-label-url>
                                     <i class="bi bi-printer me-1"></i>Label

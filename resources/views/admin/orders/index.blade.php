@@ -49,7 +49,13 @@
         // What this page can actually offer. Nothing is shown for an order it
         // would only be refused on.
         $movable = $orders->filter(fn ($o) => $o->order_status->canStartProcessing());
-        $bookable = $orders->filter(fn ($o) => $o->canBookShipment());
+
+        // Booking is only offered when EasyParcel could actually carry it out.
+        // Unlike the order page, this list does not show a disabled button per
+        // row — that would be one dead control per line. The reason is stated
+        // once, above the table.
+        $couldBook = $orders->filter(fn ($o) => $o->canBookShipment());
+        $bookable = $easyparcelConnected ? $couldBook : collect();
         $printable = $orders->filter(fn ($o) => $o->hasAwb());
         $anyAction = $movable->isNotEmpty() || $bookable->isNotEmpty() || $printable->isNotEmpty();
 
@@ -68,6 +74,21 @@
         $showsCourier = ($filtered && in_array($filtered, $courierStatuses, true))
             || $orders->contains(fn ($o) => $o->shipment !== null);
     @endphp
+
+    @if (! $easyparcelConnected && $couldBook->isNotEmpty())
+        {{-- Said once for the page rather than as a dead button on every row.
+             Without this the Book courier action would simply be absent, which
+             reads as a broken screen rather than a paused integration. --}}
+        <div class="alert alert-secondary d-flex align-items-start gap-2 py-2 small">
+            <i class="bi bi-info-circle mt-1"></i>
+            <div>
+                <strong>EasyParcel is not connected,</strong> so courier booking is
+                unavailable — {{ $couldBook->count() }} order(s) here would otherwise be
+                bookable. Open an order to record the courier and AWB by hand, or
+                <a href="{{ route('admin.integrations.index') }}">connect EasyParcel</a>.
+            </div>
+        </div>
+    @endif
 
     {{-- Standalone so the table is not wrapped in a form: each row carries its
          own single-order form, and nesting those inside a bulk form would be
@@ -141,7 +162,7 @@
                 @forelse ($orders as $order)
                     @php
                         $canProcess = $order->order_status->canStartProcessing();
-                        $canBook = $order->canBookShipment();
+                        $canBook = $easyparcelConnected && $order->canBookShipment();
                         $canPrint = $order->hasAwb();
                     @endphp
                     <tr>

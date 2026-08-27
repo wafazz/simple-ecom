@@ -12,9 +12,12 @@ class Shipment extends Model
 {
     use HasFactory;
 
+    /** `provider` value marking a hand-keyed shipment. */
+    public const PROVIDER_MANUAL = 'manual';
+
     protected $fillable = [
         'order_id', 'provider', 'provider_shipment_ref',
-        'awb_no', 'tracking_no', 'tracking_url', 'label_url',
+        'awb_no', 'tracking_no', 'tracking_url', 'label_url', 'label_path',
         'courier_name', 'service_id', 'service_name', 'cost_minor', 'status',
         'raw_response', 'booked_at', 'last_tracked_at',
     ];
@@ -51,6 +54,29 @@ class Shipment extends Model
         }
 
         return (string) ($this->service_id ?? '—');
+    }
+
+    /** Keyed in by an admin rather than booked through a courier API. */
+    public function isManual(): bool
+    {
+        return $this->provider === self::PROVIDER_MANUAL;
+    }
+
+    /**
+     * Where to send an admin who wants to see the label, whichever way the
+     * shipment was fulfilled.
+     *
+     * An uploaded label is NOT a public file — it resolves to an authenticated
+     * route that streams it, so callers can treat both kinds the same and no
+     * caller has to remember which is which.
+     */
+    public function labelUrl(): ?string
+    {
+        if (filled($this->label_path)) {
+            return route('admin.orders.awb.label', $this->order_id);
+        }
+
+        return filled($this->label_url) ? $this->label_url : null;
     }
 
     public function order(): BelongsTo
