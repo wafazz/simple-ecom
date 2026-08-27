@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Enums\PaymentStatus;
 use Illuminate\Console\Command;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -85,10 +86,19 @@ class ResetCatalogCommand extends Command
 
         // Read the quantities BEFORE the truncate, while order_items still
         // exists. Nothing in the app ever puts stock back — not even cancelling
-        // an order — so every row here was genuinely taken off the shelf and
-        // adding it back cannot double-count.
+        // or refunding an order — so what is counted here cannot double-count.
+        //
+        // ⚠ Only orders that actually SETTLED. Stock is taken at settlement
+        // (PaymentController), not at checkout, so a pending or failed order
+        // never touched it and crediting one back would invent stock that was
+        // never sold. Refunded counts: the money came back, the goods did not.
         $stock = $this->option('restore-stock')
             ? DB::table('order_items')
+                ->join('orders', 'orders.id', '=', 'order_items.order_id')
+                ->whereIn('orders.payment_status', [
+                    PaymentStatus::Paid->value,
+                    PaymentStatus::Refunded->value,
+                ])
                 ->select('product_variant_id', DB::raw('SUM(qty) AS qty'))
                 ->groupBy('product_variant_id')
                 ->pluck('qty', 'product_variant_id')
