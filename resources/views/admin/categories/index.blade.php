@@ -32,7 +32,8 @@
                         </td>
                         <td class="text-end">
                             <a href="{{ route('admin.categories.edit', $category) }}" class="btn btn-sm btn-outline-secondary">Edit</a>
-                            <form method="POST" action="{{ route('admin.categories.toggle', $category) }}" class="d-inline">
+                            <form method="POST" action="{{ route('admin.categories.toggle', $category) }}" class="d-inline"
+                                  data-confirm="{{ $category->is_active ? 'Deactivate' : 'Activate' }} the category “{{ $category->name }}”?">
                                 @csrf @method('PATCH')
                                 <button class="btn btn-sm btn-outline-{{ $category->is_active ? 'warning' : 'success' }}">
                                     {{ $category->is_active ? 'Deactivate' : 'Activate' }}

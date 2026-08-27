@@ -169,7 +169,8 @@
                         <tr><th>Token expires</th><td>{{ $expiresAt?->diffForHumans() ?? '—' }}</td></tr>
                         </tbody>
                     </table>
-                    <form method="POST" action="{{ route('admin.integrations.disconnect') }}">
+                    <form method="POST" action="{{ route('admin.integrations.disconnect') }}"
+                          data-confirm="Disconnect EasyParcel? Courier booking stops working until the account is authorised again.">
                         @csrf @method('DELETE')
                         <button class="btn btn-outline-danger btn-sm">Disconnect</button>
                     </form>
@@ -215,7 +216,8 @@
     @if ($meta['source'] === 'admin')
         @php $field = str_replace('.', '_', $key); @endphp
         <form id="clear-{{ $field }}" method="POST"
-              action="{{ route('admin.integrations.credentials.clear', $key) }}" class="d-none">
+              action="{{ route('admin.integrations.credentials.clear', $key) }}" class="d-none"
+              data-confirm="Clear this saved credential? The value cannot be recovered and the integration stops working until it is entered again.">
             @csrf @method('DELETE')
         </form>
     @endif

@@ -353,57 +353,42 @@
     }
 
     /* -----------------------------------------------------------------------
-       Two-step delete
+       Confirm before an action fires
 
-       A destructive action behind an icon needs a second thought, and an icon
-       button gives no room for the word "delete". The first submit arms the
-       button and says what the next click does; it disarms itself after a few
-       seconds so a half-finished intention does not stay loaded.
+       Any element carrying data-confirm asks first. Put it on the FORM for a
+       button that lives inside its own form, and on the BUTTON for the bulk
+       bar, whose buttons sit outside the form they submit via form="".
 
-       Deliberately NOT window.confirm(): a modal dialog blocks the page, and
-       the form still submits normally if this script never runs — the server
-       is what decides whether the delete is allowed.
+       Nothing here is a security control: the server re-checks every one of
+       these, and the action still works with JavaScript off. It exists so a
+       mis-aimed click on a row of small buttons does not change an order.
        ----------------------------------------------------------------------- */
 
-    $$('[data-confirm-delete]').forEach(function (form) {
-        var button = form.querySelector('button');
-        if (!button) return;
+    function confirmed(el) {
+        return window.confirm(el.getAttribute('data-confirm'));
+    }
 
-        var original = button.innerHTML;
-        var label = button.getAttribute('title') || 'Delete';
-        var armed = false;
-        var timer = null;
-
+    $$('form[data-confirm]').forEach(function (form) {
         form.addEventListener('submit', function (e) {
-            if (armed) return;
-
-            e.preventDefault();
-            armed = true;
-            button.innerHTML = '<i class="bi bi-trash-fill" aria-hidden="true"></i>';
-            button.classList.add('btn-danger');
-            button.classList.remove('btn-outline-danger');
-            button.setAttribute('title', 'Click again to confirm');
-
-            timer = window.setTimeout(function () {
-                armed = false;
-                button.innerHTML = original;
-                button.classList.remove('btn-danger');
-                button.classList.add('btn-outline-danger');
-                button.setAttribute('title', label);
-            }, 4000);
-        });
-
-        // Moving away is a change of mind; disarm rather than leave it hot.
-        button.addEventListener('blur', function () {
-            if (!armed) return;
-            window.clearTimeout(timer);
-            armed = false;
-            button.innerHTML = original;
-            button.classList.remove('btn-danger');
-            button.classList.add('btn-outline-danger');
-            button.setAttribute('title', label);
+            if (!confirmed(form)) e.preventDefault();
         });
     });
+
+    /* Capture phase, so a cancelled action is stopped before any other click
+       handler on the page acts on it. */
+    document.addEventListener('click', function (e) {
+        var el = e.target.closest('[data-confirm]');
+        if (!el || el.tagName === 'FORM') return;
+
+        // The form's own submit handler already asks; do not ask twice.
+        var form = el.closest('form[data-confirm]');
+        if (form) return;
+
+        if (!confirmed(el)) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+    }, true);
 
     /* -----------------------------------------------------------------------
        Admin order list: select-all and the bulk bar

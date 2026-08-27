@@ -43,7 +43,8 @@
                         <td class="text-end">
                             <a href="{{ route('admin.products.edit', $product) }}" class="btn btn-sm btn-outline-secondary">Edit</a>
                             <a href="{{ route('admin.products.variations.index', $product) }}" class="btn btn-sm btn-outline-primary">Stock</a>
-                            <form method="POST" action="{{ route('admin.products.toggle', $product) }}" class="d-inline">
+                            <form method="POST" action="{{ route('admin.products.toggle', $product) }}" class="d-inline"
+                                  data-confirm="{{ $product->is_active ? 'Deactivate' : 'Activate' }} “{{ $product->name }}”?{{ $product->is_active ? ' Customers will no longer see it.' : '' }}">
                                 @csrf @method('PATCH')
                                 <button class="btn btn-sm btn-outline-{{ $product->is_active ? 'warning' : 'success' }}">
                                     {{ $product->is_active ? 'Deactivate' : 'Activate' }}

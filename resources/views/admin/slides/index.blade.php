@@ -67,7 +67,8 @@
                             </td>
                             <td class="text-center">{{ $slide->sort_order }}</td>
                             <td class="text-center">
-                                <form method="POST" action="{{ route('admin.slides.toggle', $slide) }}">
+                                <form method="POST" action="{{ route('admin.slides.toggle', $slide) }}"
+                                      data-confirm="{{ $slide->is_active ? 'Hide' : 'Show' }} this banner on the shop front?">
                                     @csrf @method('PATCH')
                                     <button class="btn btn-sm {{ $slide->is_active ? 'btn-outline-success' : 'btn-outline-secondary' }}">
                                         {{ $slide->is_active ? 'Shown' : 'Hidden' }}
@@ -79,10 +80,10 @@
                                    class="btn btn-sm btn-outline-primary">Edit</a>
 
                                 {{-- A banner carries no order history, so this really
-                                     does delete. data-confirm-delete is handled in the
-                                     page script below, never a JS confirm() dialog. --}}
+                                     does delete — the picture goes with it. --}}
                                 <form method="POST" action="{{ route('admin.slides.destroy', $slide) }}"
-                                      class="d-inline" data-confirm-delete>
+                                      class="d-inline"
+                                      data-confirm="Delete this banner? The picture is deleted too and cannot be recovered.">
                                     @csrf @method('DELETE')
                                     <button class="btn btn-sm btn-outline-danger">Delete</button>
                                 </form>

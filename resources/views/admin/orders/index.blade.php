@@ -107,6 +107,7 @@
 
             @if ($movable->isNotEmpty())
                 <button type="submit" form="bulk-process" name="bulk_action" value="process"
+                        data-confirm="Move the selected orders to Processing?"
                         class="btn btn-sm btn-shop">
                     <i class="bi bi-arrow-right-circle me-1"></i>Move to Processing
                 </button>
@@ -226,7 +227,8 @@
                                          title for a mouse, aria-label for a screen
                                          reader. An icon with neither is a button
                                          nobody can name. --}}
-                                    <form method="POST" action="{{ route('admin.orders.approve', $order) }}">
+                                    <form method="POST" action="{{ route('admin.orders.approve', $order) }}"
+                                          data-confirm="Approve order {{ $order->order_no }}? It is accepted for fulfilment, but NOT marked as paid.">
                                         @csrf @method('PATCH')
                                         <button class="btn btn-sm btn-outline-success"
                                                 title="Approve order — accepts it for fulfilment. Does NOT mark it paid."
@@ -235,7 +237,8 @@
                                         </button>
                                     </form>
 
-                                    <form method="POST" action="{{ route('admin.orders.cancel', $order) }}">
+                                    <form method="POST" action="{{ route('admin.orders.cancel', $order) }}"
+                                          data-confirm="Cancel order {{ $order->order_no }}?">
                                         @csrf @method('PATCH')
                                         <button class="btn btn-sm btn-outline-secondary"
                                                 title="Cancel order"
@@ -246,11 +249,10 @@
                                 @endif
 
                                 @if ($isPending && $unpaid)
-                                    {{-- Two-step, because one stray click on an icon
-                                         should not remove a row. Soft: the order and
-                                         its number survive and can be restored. --}}
+                                    {{-- Soft: the order and its number survive and can
+                                         be restored. --}}
                                     <form method="POST" action="{{ route('admin.orders.destroy', $order) }}"
-                                          data-confirm-delete>
+                                          data-confirm="Delete order {{ $order->order_no }}? It is hidden from the list but the record is kept.">
                                         @csrf @method('DELETE')
                                         <button class="btn btn-sm btn-outline-danger"
                                                 title="Delete order"
@@ -263,7 +265,8 @@
                                 @if ($canProcess)
                                     {{-- Its own form, so this button moves exactly
                                          this order regardless of what is ticked. --}}
-                                    <form method="POST" action="{{ route('admin.orders.process') }}">
+                                    <form method="POST" action="{{ route('admin.orders.process') }}"
+                                          data-confirm="Move order {{ $order->order_no }} to Processing?">
                                         @csrf @method('PATCH')
                                         <input type="hidden" name="order_ids[]" value="{{ $order->id }}">
                                         <button class="btn btn-sm btn-outline-primary text-nowrap">

@@ -73,7 +73,8 @@
             <div class="card mb-3">
                 <div class="card-header">Fulfilment</div>
                 <div class="card-body">
-                    <form method="POST" action="{{ route('admin.orders.status', $order) }}" class="mb-3">
+                    <form method="POST" action="{{ route('admin.orders.status', $order) }}" class="mb-3"
+                          data-confirm="Change the status of order {{ $order->order_no }}?">
                         @csrf @method('PATCH')
                         <label for="order_status" class="form-label">Order status</label>
                         <div class="d-flex gap-1">
@@ -97,8 +98,10 @@
                     </form>
 
                     @if ($order->payment_status === \App\Enums\PaymentStatus::Paid)
+                        {{-- data-confirm rather than an inline onsubmit, so every
+                             action on the panel asks the same way. --}}
                         <form method="POST" action="{{ route('admin.orders.refund', $order) }}"
-                              onsubmit="return confirm('Mark this order refunded? Issue the actual refund in the ToyyibPay dashboard.');">
+                              data-confirm="Mark order {{ $order->order_no }} refunded? Issue the actual refund in the ToyyibPay dashboard — no money moves from here.">
                             @csrf @method('PATCH')
                             <button class="btn btn-sm btn-outline-danger w-100">Mark as refunded</button>
                         </form>

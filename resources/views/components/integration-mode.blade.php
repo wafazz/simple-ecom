@@ -4,9 +4,9 @@
 
 <form method="POST" action="{{ route('admin.integrations.mode', $provider) }}"
       class="d-inline-flex align-items-center gap-2"
-      @if (! $isProduction)
-          onsubmit="return confirm('Switch {{ ucfirst($provider) }} to PRODUCTION? Real money and real parcels from that point on.');"
-      @endif>
+      {{-- Both directions ask now. Going back to sandbox is not destructive, but
+           it silently stops real payments being taken, which is worth a beat. --}}
+      data-confirm="@if ($isProduction)Switch {{ ucfirst($provider) }} back to SANDBOX? Real payments stop being taken.@else Switch {{ ucfirst($provider) }} to PRODUCTION? Real money and real parcels from that point on.@endif">
     @csrf @method('PATCH')
 
     {{-- Submits the opposite of the current mode: one button, one decision. --}}
