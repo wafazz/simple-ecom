@@ -51,6 +51,11 @@ class SettingRequest extends FormRequest
             'ship_east_next' => ['required', 'numeric', 'min:0', 'max:100000'],
             'low_stock_threshold' => ['required', 'integer', 'min:0', 'max:10000'],
 
+            // The return & exchange policy, as plain text. Long, and optional:
+            // an empty policy hides the page rather than publishing a blank
+            // one — see PolicyController.
+            'return_policy' => ['nullable', 'string', 'max:20000'],
+
             // Sender details for shipment booking (REQ-013). Nullable so the
             // rest of Settings stays editable before booking is set up; the
             // booking path checks completeness separately and refuses without.

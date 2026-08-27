@@ -90,6 +90,11 @@
                 <h3>Orders</h3>
                 <ul class="list-unstyled d-grid gap-2 mb-0">
                     <li><a href="{{ route('order-status.show') }}">Track your order</a></li>
+                    {{-- Linked only once a policy has been written. An empty
+                         page in the footer of every screen is worse than none. --}}
+                    @if (filled(\App\Models\Setting::get('return_policy')))
+                        <li><a href="{{ route('policy.returns') }}">Returns &amp; exchanges</a></li>
+                    @endif
                     <li>Payment by FPX &amp; online banking</li>
                 </ul>
             </div>

@@ -17,6 +17,7 @@ use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\OrderStatusController;
 use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\PolicyController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ShippingController;
 use App\Support\IntegrationConfig;
@@ -53,6 +54,8 @@ Route::get('/checkout/confirmation/{orderNo}', [CheckoutController::class, 'conf
 Route::get('/payment/toyyibpay/return', [PaymentController::class, 'handleReturn'])->name('payment.return');
 Route::post('/payment/toyyibpay/callback', [PaymentController::class, 'handleCallback'])->name('payment.callback');
 Route::get('/payment/{orderNo}', [PaymentController::class, 'pay'])->name('payment.pay');
+
+Route::get('/return-policy', [PolicyController::class, 'returns'])->name('policy.returns');
 
 Route::get('/order-status', [OrderStatusController::class, 'show'])->name('order-status.show');
 Route::post('/order-status', [OrderStatusController::class, 'lookup'])->name('order-status.lookup');
