@@ -8,11 +8,11 @@
     <meta name="description" content="@yield('meta_description', $storeName.' — browse the catalogue and check out as a guest.')">
 
     {{-- Locally hosted. Never a CDN at runtime (Planning §5, spec §6). --}}
-    <link rel="stylesheet" href="{{ asset('css/bootstrap.min.css') }}">
-    <link rel="stylesheet" href="{{ asset('vendor/bootstrap-icons/bootstrap-icons.css') }}">
+    <link rel="stylesheet" href="{{ \App\Support\Asset::url('css/bootstrap.min.css') }}">
+    <link rel="stylesheet" href="{{ \App\Support\Asset::url('vendor/bootstrap-icons/bootstrap-icons.css') }}">
     {{-- Storefront only. The admin keeps app.css, so a change to the shop
          cannot reach back into the admin screens. --}}
-    <link rel="stylesheet" href="{{ asset('css/storefront.css') }}">
+    <link rel="stylesheet" href="{{ \App\Support\Asset::url('css/storefront.css') }}">
 </head>
 <body>
 <a href="#main" class="visually-hidden-focusable btn btn-shop m-2">Skip to content</a>
@@ -104,8 +104,8 @@
 
 {{-- The navbar toggler uses data-bs-toggle, which needs Bootstrap's JS.
      Without this the mobile menu silently does nothing. --}}
-<script src="{{ asset('js/bootstrap.bundle.min.js') }}"></script>
-<script src="{{ asset('js/app.js') }}"></script>
+<script src="{{ \App\Support\Asset::url('js/bootstrap.bundle.min.js') }}"></script>
+<script src="{{ \App\Support\Asset::url('js/app.js') }}"></script>
 @stack('scripts')
 </body>
 </html>

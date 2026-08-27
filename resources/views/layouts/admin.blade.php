@@ -7,9 +7,9 @@
     <title>@yield('title', 'Admin') — {{ $storeName }}</title>
 
     {{-- All vendored locally. No CDN at runtime, no build step (spec §6). --}}
-    <link rel="stylesheet" href="{{ asset('vendor/bootstrap-icons/bootstrap-icons.css') }}">
-    <link rel="stylesheet" href="{{ asset('vendor/adminlte/adminlte.min.css') }}">
-    <link rel="stylesheet" href="{{ asset('css/app.css') }}">
+    <link rel="stylesheet" href="{{ \App\Support\Asset::url('vendor/bootstrap-icons/bootstrap-icons.css') }}">
+    <link rel="stylesheet" href="{{ \App\Support\Asset::url('vendor/adminlte/adminlte.min.css') }}">
+    <link rel="stylesheet" href="{{ \App\Support\Asset::url('css/app.css') }}">
 </head>
 <body class="layout-fixed sidebar-expand-lg bg-body-tertiary">
 <div class="app-wrapper">
@@ -210,9 +210,9 @@
     </footer>
 </div>
 
-<script src="{{ asset('js/bootstrap.bundle.min.js') }}"></script>
-<script src="{{ asset('vendor/adminlte/adminlte.min.js') }}"></script>
-<script src="{{ asset('js/app.js') }}"></script>
+<script src="{{ \App\Support\Asset::url('js/bootstrap.bundle.min.js') }}"></script>
+<script src="{{ \App\Support\Asset::url('vendor/adminlte/adminlte.min.js') }}"></script>
+<script src="{{ \App\Support\Asset::url('js/app.js') }}"></script>
 @stack('scripts')
 </body>
 </html>

@@ -4,9 +4,9 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Admin Login — {{ config('shop.store_name') }}</title>
-    <link rel="stylesheet" href="{{ asset('vendor/bootstrap-icons/bootstrap-icons.css') }}">
-    <link rel="stylesheet" href="{{ asset('vendor/adminlte/adminlte.min.css') }}">
-    <link rel="stylesheet" href="{{ asset('css/app.css') }}">
+    <link rel="stylesheet" href="{{ \App\Support\Asset::url('vendor/bootstrap-icons/bootstrap-icons.css') }}">
+    <link rel="stylesheet" href="{{ \App\Support\Asset::url('vendor/adminlte/adminlte.min.css') }}">
+    <link rel="stylesheet" href="{{ \App\Support\Asset::url('css/app.css') }}">
 </head>
 <body class="login-page bg-body-secondary">
 <div class="login-box">
@@ -58,8 +58,8 @@
     </div>
 </div>
 
-<script src="{{ asset('js/bootstrap.bundle.min.js') }}"></script>
-<script src="{{ asset('vendor/adminlte/adminlte.min.js') }}"></script>
+<script src="{{ \App\Support\Asset::url('js/bootstrap.bundle.min.js') }}"></script>
+<script src="{{ \App\Support\Asset::url('vendor/adminlte/adminlte.min.js') }}"></script>
 <script>
     // Reveal toggle. The field is only ever switched client-side — the form
     // posts the same value either way.
