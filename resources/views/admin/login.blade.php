@@ -34,7 +34,12 @@
                     <input type="password" name="password" id="password" required
                            placeholder="Password" aria-label="Password"
                            class="form-control @error('password') is-invalid @enderror">
-                    <div class="input-group-text"><span class="bi bi-lock-fill"></span></div>
+                    {{-- type="button": a bare <button> inside a form submits it. --}}
+                    <button type="button" id="togglePassword" class="input-group-text"
+                            aria-controls="password" aria-pressed="false" aria-label="Show password"
+                            title="Show password">
+                        <span class="bi bi-eye-fill" id="togglePasswordIcon" aria-hidden="true"></span>
+                    </button>
                 </div>
 
                 <div class="row">
@@ -55,5 +60,29 @@
 
 <script src="{{ asset('js/bootstrap.bundle.min.js') }}"></script>
 <script src="{{ asset('vendor/adminlte/adminlte.min.js') }}"></script>
+<script>
+    // Reveal toggle. The field is only ever switched client-side — the form
+    // posts the same value either way.
+    document.getElementById('togglePassword').addEventListener('click', function () {
+        const input = document.getElementById('password');
+        const icon = document.getElementById('togglePasswordIcon');
+        const hiding = input.type === 'text';
+        const label = hiding ? 'Show password' : 'Hide password';
+
+        // Changing `type` drops the caret to the end, so put it back.
+        const start = input.selectionStart;
+        const end = input.selectionEnd;
+
+        input.type = hiding ? 'password' : 'text';
+        icon.className = hiding ? 'bi bi-eye-fill' : 'bi bi-eye-slash-fill';
+
+        this.setAttribute('aria-pressed', hiding ? 'false' : 'true');
+        this.setAttribute('aria-label', label);
+        this.setAttribute('title', label);
+
+        input.focus();
+        input.setSelectionRange(start, end);
+    });
+</script>
 </body>
 </html>

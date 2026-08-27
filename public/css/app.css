@@ -201,3 +201,22 @@ footer.shop-footer {
 .sidebar-collapse .app-sidebar:hover .nav-treeview > .nav-item > .nav-link {
     padding-left: .5rem;
 }
+
+/* ---------------------------------------------------------------------------
+   Password reveal toggle (admin login).
+
+   The button reuses .input-group-text so it sits flush with the field and
+   matches the email row's icon box exactly. A <button> defaults to
+   cursor: default, and .input-group-text does not set one, so it has to be
+   said here or the control does not read as clickable.
+   --------------------------------------------------------------------------- */
+
+button.input-group-text {
+    cursor: pointer;
+}
+
+/* Edge draws its own reveal control inside password fields, which would sit
+   next to ours and toggle the same thing. */
+input[type="password"]::-ms-reveal {
+    display: none;
+}
