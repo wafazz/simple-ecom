@@ -266,6 +266,34 @@ class SlideTest extends TestCase
         $this->assertStringContainsString('data-bs-ride="carousel"', $html);
     }
 
+    /**
+     * The whole suite passed while the slider was visibly broken, because none
+     * of it reads CSS. Bootstrap hides inactive slides with
+     * `.carousel-item{display:none}` at specificity (0,1,0); a rule setting
+     * display on every .hero-slide ties `.carousel-item.active` and wins on load
+     * order, so EVERY slide renders — floated into the same place by
+     * margin-right:-100%, which reads as piled-up text that never advances.
+     */
+    #[Test]
+    public function the_stylesheet_never_forces_display_on_every_slide(): void
+    {
+        $css = file_get_contents(public_path('css/storefront.css'));
+
+        preg_match('/\.hero-slider \.hero-slide \{([^}]*)\}/', $css, $block);
+
+        $this->assertNotEmpty($block, 'The .hero-slider .hero-slide rule has been renamed or removed.');
+        $this->assertStringNotContainsString(
+            'display',
+            $block[1],
+            'Setting display here shows every slide at once — put it on '
+            .'.carousel-item.active and on :not(.carousel-item) instead.',
+        );
+
+        // And the shown states must still be laid out.
+        $this->assertStringContainsString('.hero-slider .carousel-item.active', $css);
+        $this->assertStringContainsString('.hero-slider .hero-slide:not(.carousel-item)', $css);
+    }
+
     #[Test]
     public function banners_appear_in_their_set_order(): void
     {

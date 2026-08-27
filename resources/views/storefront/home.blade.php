@@ -31,7 +31,7 @@
 
             <div @class(['carousel-inner' => $multiple])>
                 @foreach ($slides as $i => $slide)
-                    <div @class(['slide', 'carousel-item' => $multiple, 'active' => $multiple && $i === 0])
+                    <div @class(['hero-slide', 'carousel-item' => $multiple, 'active' => $multiple && $i === 0])
                          @if ($multiple) aria-roledescription="slide"
                              aria-label="{{ $i + 1 }} of {{ $slides->count() }}" @endif>
 
@@ -40,15 +40,15 @@
                                  loads eagerly and is flagged high priority; the rest
                                  wait until they are needed. --}}
                             <img src="{{ $slide->imageUrl() }}" alt=""
-                                 class="slide__img"
+                                 class="hero-slide__img"
                                  style="object-position: {{ $slide->objectPosition() }}"
                                  loading="{{ $i === 0 ? 'eager' : 'lazy' }}"
                                  fetchpriority="{{ $i === 0 ? 'high' : 'auto' }}"
                                  decoding="async">
-                            <span class="slide__scrim" aria-hidden="true"></span>
+                            <span class="hero-slide__scrim" aria-hidden="true"></span>
                         @endif
 
-                        <div class="slide__inner">
+                        <div class="hero-slide__inner">
                             @if ($slide->eyebrow)
                                 <p class="eyebrow">{{ $slide->eyebrow }}</p>
                             @endif

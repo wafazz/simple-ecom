@@ -927,15 +927,33 @@ td.money, th.money { text-align: right; }
     background: var(--surface);
 }
 
-.hero-slider .slide {
+.hero-slider .hero-slide {
     position: relative;
-    display: flex;
     align-items: center;
     min-height: clamp(20rem, 34vw, 33.75rem);
     padding: clamp(1.9rem, 5vw, 4.2rem);
 }
 
-.slide__img {
+/* A lone banner is not a carousel item, so nothing else lays it out. */
+.hero-slider .hero-slide:not(.carousel-item) {
+    display: flex;
+}
+
+/* Inside a carousel, Bootstrap owns `display`: .carousel-item is none and
+   .carousel-item.active is block. Setting display on every .hero-slide would
+   tie that specificity and win on load order, showing all of them at once —
+   and since Bootstrap floats items into the same place with margin-right:-100%,
+   that reads as text piled on text that never advances.
+   So re-assert flex ONLY for the items Bootstrap is actually showing, above
+   the specificity of its own rules. The -next/-prev pair exist mid-transition;
+   without them the incoming slide is invisible while it moves. */
+.hero-slider .carousel-item.active,
+.hero-slider .carousel-item.carousel-item-next,
+.hero-slider .carousel-item.carousel-item-prev {
+    display: flex;
+}
+
+.hero-slide__img {
     position: absolute;
     inset: 0;
     width: 100%;
@@ -947,7 +965,7 @@ td.money, th.money { text-align: right; }
 /* Legibility is not optional: the admin can upload any picture, and dark text
    on an unknown photograph is a coin toss. The wash is strongest where the
    words are and clears the far side, so the artwork still reads. */
-.slide__scrim {
+.hero-slide__scrim {
     position: absolute;
     inset: 0;
     background: linear-gradient(
@@ -959,19 +977,19 @@ td.money, th.money { text-align: right; }
     );
 }
 
-.hero-slider .slide__inner {
+.hero-slider .hero-slide__inner {
     position: relative;
     z-index: 1;
     max-width: 34rem;
 }
 
-.hero-slider .slide__inner h1 {
+.hero-slider .hero-slide__inner h1 {
     font-size: clamp(2.1rem, 5.4vw, 3.4rem);
     line-height: 1.06;
     margin: .6rem 0 1rem;
 }
 
-.hero-slider .slide__inner p {
+.hero-slider .hero-slide__inner p {
     color: var(--ink-soft);
     font-size: 1.05rem;
     margin-bottom: 1.6rem;
@@ -1022,12 +1040,12 @@ td.money, th.money { text-align: right; }
     /* Taller and narrower: a wide banner cropped to a phone keeps only its
        middle, so the band needs the height to stay a picture rather than a
        stripe. The scrim turns bottom-up, because the text sits low here. */
-    .hero-slider .slide {
+    .hero-slider .hero-slide {
         min-height: 26rem;
         align-items: flex-end;
     }
 
-    .slide__scrim {
+    .hero-slide__scrim {
         background: linear-gradient(
             to top,
             rgb(255 255 255 / .96) 0%,
