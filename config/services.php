@@ -35,6 +35,24 @@ return [
         ],
     ],
 
+    /*
+     * Mailgun, over SMTP rather than the HTTP API.
+     *
+     * The API driver needs symfony/mailgun-mailer, and pulling it in drags the
+     * Symfony tree to a version requiring PHP 8.4 while this project pins the
+     * platform to 8.3 to match the server. SMTP needs no package at all and
+     * Mailgun supports both equally.
+     *
+     * Port matters more than it looks: many hosts block 587 outbound, and 2525
+     * is Mailgun's unblocked alternative. It is admin-settable for that reason.
+     */
+    'mailgun' => [
+        'smtp_host' => env('MAILGUN_SMTP_HOST', 'smtp.mailgun.org'),
+        'smtp_port' => env('MAILGUN_SMTP_PORT', 587),
+        'smtp_username' => env('MAILGUN_SMTP_USERNAME'),
+        'smtp_password' => env('MAILGUN_SMTP_PASSWORD'),
+    ],
+
     // REQ-005 — ToyyibPay. Planning §11.A.2.
     // env() is read here and nowhere else: after config:cache it returns null.
     'toyyibpay' => [

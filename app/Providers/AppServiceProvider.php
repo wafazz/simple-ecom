@@ -8,6 +8,7 @@ use App\Models\Setting;
 use App\Services\CartService;
 use App\Services\EasyParcelService;
 use App\Services\ToyyibPayService;
+use App\Support\MailSettings;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\View;
@@ -40,6 +41,16 @@ class AppServiceProvider extends ServiceProvider
         // attributes fail loudly in dev and tests instead of becoming N+1
         // queries in production.
         Model::shouldBeStrict(! $this->app->isProduction());
+
+        // Mailgun's SMTP credentials live in secure_settings, which is never
+        // cached. Reading them on every request would be a query per page for
+        // mail that most pages never send — so they are applied when the
+        // mailer is first RESOLVED, which happens only when something actually
+        // sends. Future mailables get the right transport without having to
+        // remember to ask for it.
+        $this->app->resolving('mail.manager', function (): void {
+            MailSettings::apply();
+        });
 
         // Planning §14 — the ToyyibPay callback requires HTTPS, and route()
         // must generate it as such.

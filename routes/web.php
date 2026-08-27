@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\IntegrationController;
+use App\Http\Controllers\Admin\MailController;
 use App\Http\Controllers\Admin\ManualShipmentController;
 use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\PolicyController as AdminPolicyController;
@@ -161,6 +162,15 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
         // Admin\PolicyController. The text still lives in `settings`.
         Route::get('/return-policy', [AdminPolicyController::class, 'edit'])->name('policy.edit');
         Route::put('/return-policy', [AdminPolicyController::class, 'update'])->name('policy.update');
+
+        // Mailgun over SMTP, on its own screen.
+        Route::get('/mail', [MailController::class, 'edit'])->name('mail.edit');
+        Route::put('/mail', [MailController::class, 'update'])->name('mail.update');
+
+        // Throttled: each press is a real message leaving the server.
+        Route::post('/mail/test', [MailController::class, 'test'])
+            ->middleware('throttle:10,1')
+            ->name('mail.test');
 
         // Settings (REQ-011)
         Route::get('/settings', [SettingController::class, 'edit'])->name('settings.edit');

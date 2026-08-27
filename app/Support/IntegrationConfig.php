@@ -23,12 +23,15 @@ final class IntegrationConfig
         'toyyibpay.category_code',
         'easyparcel.client_id',
         'easyparcel.client_secret',
+        'mailgun.smtp_username',
+        'mailgun.smtp_password',
     ];
 
     /** Values that must never be echoed back to a form. */
     public const WRITE_ONLY = [
         'toyyibpay.secret_key',
         'easyparcel.client_secret',
+        'mailgun.smtp_password',
     ];
 
     /** Providers that have their own credential form. */

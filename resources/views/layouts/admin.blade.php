@@ -162,6 +162,7 @@
                             ['admin.categories.index',  'admin.categories.*',   'bi-tags',     'Categories'],
                             ['admin.integrations.index','admin.integrations.*', 'bi-plug',     'Integrations'],
                             ['admin.policy.edit',       'admin.policy.*',       'bi-file-text', 'Return policy'],
+                            ['admin.mail.edit',         'admin.mail.*',         'bi-envelope',  'Email'],
                             ['admin.settings.edit',     'admin.settings.*',     'bi-gear',     'Settings'],
                         ];
                     @endphp
