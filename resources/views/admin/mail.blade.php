@@ -157,11 +157,16 @@
             </div>
 
             <div class="card mt-3">
-                <div class="card-header">Note</div>
+                <div class="card-header">What gets sent</div>
                 <div class="card-body small">
+                    <p>
+                        <strong>Order confirmation</strong> — sent to the buyer once their payment
+                        is verified, with the items, totals and delivery address.
+                    </p>
                     <p class="mb-0">
-                        Nothing in the shop sends email yet — order confirmations are not built.
-                        These settings prepare the transport, and the test button proves it works.
+                        While this screen says <strong>Not configured</strong>, nothing is sent
+                        at all. Orders still complete normally; customers simply do not get an
+                        email.
                     </p>
                 </div>
             </div>

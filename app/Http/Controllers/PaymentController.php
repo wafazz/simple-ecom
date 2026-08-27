@@ -4,17 +4,21 @@ namespace App\Http\Controllers;
 
 use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
+use App\Mail\OrderPaid;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Models\ProductVariant;
 use App\Services\ToyyibPayService;
+use App\Support\MailSettings;
 use App\Support\PaymentVerification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\View\View;
+use Throwable;
 
 /**
  * REQ-005 — Planning §11.A.
@@ -51,7 +55,7 @@ class PaymentController extends Controller
                 route('payment.return'),
                 route('payment.callback'),
             );
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::error('Failed to create ToyyibPay bill', [
                 'order_no' => $order->order_no,
                 'error' => $e->getMessage(),
@@ -193,13 +197,13 @@ class PaymentController extends Controller
 
     private function markPaid(Order $order, string $billCode, PaymentVerification $result): void
     {
-        DB::transaction(function () use ($order, $billCode, $result): void {
+        $settled = DB::transaction(function () use ($order, $billCode, $result): bool {
             // Guarded transition. Only the first caller proceeds; a duplicate
             // callback gets false and must not move stock.
             if (! Order::markPaidAtomically($order->id)) {
                 Log::info('Duplicate settlement ignored', ['order_no' => $order->order_no]);
 
-                return;
+                return false;
             }
 
             $this->recordPayment($order, $billCode, $result, PaymentStatus::Paid);
@@ -223,9 +227,53 @@ class PaymentController extends Controller
                 // is flagged rather than silently accepted (Planning §7.5).
                 $order->forceFill(['order_status' => OrderStatus::NeedsReview])->save();
             }
+
+            return true;
         });
 
         Log::info('Order settled', ['order_no' => $order->order_no]);
+
+        // AFTER the transaction, and only for the caller that actually settled
+        // it. Inside, a later rollback would leave a confirmation sent for an
+        // order that is not paid; and ToyyibPay sends both a return and a
+        // callback, so anything not gated on markPaidAtomically() would email
+        // the customer twice.
+        if ($settled) {
+            $this->confirmByEmail($order);
+        }
+    }
+
+    /**
+     * Tell the buyer their order is confirmed.
+     *
+     * Silent when no mail transport has been set up — an unconfigured shop
+     * simply does not send, rather than erroring on every payment. And never
+     * fatal: the money has arrived and the order is recorded, so a mail
+     * failure must not reach the gateway, which would retry a callback that
+     * already succeeded.
+     */
+    private function confirmByEmail(Order $order): void
+    {
+        if (! MailSettings::isConfigured()) {
+            Log::info('Order confirmation not sent — no mail transport configured', [
+                'order_no' => $order->order_no,
+            ]);
+
+            return;
+        }
+
+        try {
+            Mail::to($order->customer_email)->send(
+                new OrderPaid($order->fresh(['items'])),
+            );
+
+            Log::info('Order confirmation sent', ['order_no' => $order->order_no]);
+        } catch (Throwable $e) {
+            Log::error('Order confirmation failed to send', [
+                'order_no' => $order->order_no,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     private function recordPayment(Order $order, string $billCode, PaymentVerification $result, PaymentStatus $status): void
