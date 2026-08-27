@@ -175,7 +175,10 @@ class CheckoutController extends Controller
      */
     private function generateOrderNumber(): string
     {
-        $sequence = Order::query()->whereDate('created_at', today())->count() + 1;
+        // withTrashed(): a soft-deleted order keeps its number, and counting
+        // only live rows would hand today's next order a number the deleted one
+        // still holds — a unique-key failure on every attempt after that.
+        $sequence = Order::query()->withTrashed()->whereDate('created_at', today())->count() + 1;
 
         return sprintf('ORD-%s-%04d', now()->format('Ymd'), $sequence);
     }

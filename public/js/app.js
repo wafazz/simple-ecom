@@ -353,6 +353,59 @@
     }
 
     /* -----------------------------------------------------------------------
+       Two-step delete
+
+       A destructive action behind an icon needs a second thought, and an icon
+       button gives no room for the word "delete". The first submit arms the
+       button and says what the next click does; it disarms itself after a few
+       seconds so a half-finished intention does not stay loaded.
+
+       Deliberately NOT window.confirm(): a modal dialog blocks the page, and
+       the form still submits normally if this script never runs — the server
+       is what decides whether the delete is allowed.
+       ----------------------------------------------------------------------- */
+
+    $$('[data-confirm-delete]').forEach(function (form) {
+        var button = form.querySelector('button');
+        if (!button) return;
+
+        var original = button.innerHTML;
+        var label = button.getAttribute('title') || 'Delete';
+        var armed = false;
+        var timer = null;
+
+        form.addEventListener('submit', function (e) {
+            if (armed) return;
+
+            e.preventDefault();
+            armed = true;
+            button.innerHTML = '<i class="bi bi-trash-fill" aria-hidden="true"></i>';
+            button.classList.add('btn-danger');
+            button.classList.remove('btn-outline-danger');
+            button.setAttribute('title', 'Click again to confirm');
+
+            timer = window.setTimeout(function () {
+                armed = false;
+                button.innerHTML = original;
+                button.classList.remove('btn-danger');
+                button.classList.add('btn-outline-danger');
+                button.setAttribute('title', label);
+            }, 4000);
+        });
+
+        // Moving away is a change of mind; disarm rather than leave it hot.
+        button.addEventListener('blur', function () {
+            if (!armed) return;
+            window.clearTimeout(timer);
+            armed = false;
+            button.innerHTML = original;
+            button.classList.remove('btn-danger');
+            button.classList.add('btn-outline-danger');
+            button.setAttribute('title', label);
+        });
+    });
+
+    /* -----------------------------------------------------------------------
        Admin order list: select-all and the bulk bar
 
        The checkboxes and both buttons work without any of this — every one is

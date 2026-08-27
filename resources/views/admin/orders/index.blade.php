@@ -164,6 +164,12 @@
                         $canProcess = $order->order_status->canStartProcessing();
                         $canBook = $easyparcelConnected && $order->canBookShipment();
                         $canPrint = $order->hasAwb();
+
+                        // An order still awaiting payment. Approving accepts it
+                        // for fulfilment WITHOUT marking it paid — the money is
+                        // the gateway's word, never the admin's.
+                        $isPending = $order->order_status === \App\Enums\OrderStatus::Pending;
+                        $unpaid = $order->payment_status !== \App\Enums\PaymentStatus::Paid;
                     @endphp
                     <tr>
                         <td>
@@ -215,6 +221,45 @@
                         <td class="text-muted small">{{ $order->created_at->format('d M Y H:i') }}</td>
                         <td class="text-end">
                             <div class="d-flex gap-1 justify-content-end align-items-center">
+                                @if ($isPending)
+                                    {{-- Icon-only, so each carries its own label:
+                                         title for a mouse, aria-label for a screen
+                                         reader. An icon with neither is a button
+                                         nobody can name. --}}
+                                    <form method="POST" action="{{ route('admin.orders.approve', $order) }}">
+                                        @csrf @method('PATCH')
+                                        <button class="btn btn-sm btn-outline-success"
+                                                title="Approve order — accepts it for fulfilment. Does NOT mark it paid."
+                                                aria-label="Approve order {{ $order->order_no }}">
+                                            <i class="bi bi-check-lg" aria-hidden="true"></i>
+                                        </button>
+                                    </form>
+
+                                    <form method="POST" action="{{ route('admin.orders.cancel', $order) }}">
+                                        @csrf @method('PATCH')
+                                        <button class="btn btn-sm btn-outline-secondary"
+                                                title="Cancel order"
+                                                aria-label="Cancel order {{ $order->order_no }}">
+                                            <i class="bi bi-x-lg" aria-hidden="true"></i>
+                                        </button>
+                                    </form>
+                                @endif
+
+                                @if ($isPending && $unpaid)
+                                    {{-- Two-step, because one stray click on an icon
+                                         should not remove a row. Soft: the order and
+                                         its number survive and can be restored. --}}
+                                    <form method="POST" action="{{ route('admin.orders.destroy', $order) }}"
+                                          data-confirm-delete>
+                                        @csrf @method('DELETE')
+                                        <button class="btn btn-sm btn-outline-danger"
+                                                title="Delete order"
+                                                aria-label="Delete order {{ $order->order_no }}">
+                                            <i class="bi bi-trash" aria-hidden="true"></i>
+                                        </button>
+                                    </form>
+                                @endif
+
                                 @if ($canProcess)
                                     {{-- Its own form, so this button moves exactly
                                          this order regardless of what is ticked. --}}

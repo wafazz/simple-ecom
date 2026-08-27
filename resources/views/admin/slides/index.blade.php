@@ -102,31 +102,3 @@
         crop the frame to its middle.
     </div>
 @endsection
-
-@push('scripts')
-<script>
-    // Two-step delete without a modal dialog: the first click arms the button
-    // and says so, the second submits. A browser confirm() would block the page.
-    document.querySelectorAll('[data-confirm-delete]').forEach(function (form) {
-        var button = form.querySelector('button');
-        var original = button.textContent;
-        var armed = false;
-
-        form.addEventListener('submit', function (e) {
-            if (armed) return;
-            e.preventDefault();
-            armed = true;
-            button.textContent = 'Click again to delete';
-            button.classList.add('btn-danger');
-            button.classList.remove('btn-outline-danger');
-
-            window.setTimeout(function () {
-                armed = false;
-                button.textContent = original;
-                button.classList.remove('btn-danger');
-                button.classList.add('btn-outline-danger');
-            }, 4000);
-        });
-    });
-</script>
-@endpush

@@ -8,10 +8,12 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Order extends Model
 {
     use HasFactory;
+    use SoftDeletes;
 
     /**
      * Totals and statuses are ABSENT from $fillable on purpose. They are set

@@ -181,6 +181,94 @@ class OrderController extends Controller
     }
 
     /**
+     * Accept an unpaid order by hand — the counterpart to a gateway payment.
+     *
+     * Moves Pending to New Order and DELIBERATELY leaves payment_status alone.
+     * Marking an order paid from the admin would bypass the server-side
+     * verification in §11.A.5, which is the same rule markRefunded() states: an
+     * admin may record a refund and nothing else about payment. An order
+     * approved here is accepted for fulfilment while the money is still
+     * outstanding — a bank transfer or cash on delivery — and the payment badge
+     * keeps saying so until the gateway, or a refund, says otherwise.
+     */
+    public function approve(Request $request, Order $order): RedirectResponse
+    {
+        // Guarded UPDATE, not check-then-write: an order that moved underneath
+        // us — a callback landing, another admin in the next tab — is simply
+        // not matched.
+        $moved = Order::query()
+            ->whereKey($order->id)
+            ->where('order_status', OrderStatus::Pending->value)
+            ->update(['order_status' => OrderStatus::NewOrder->value, 'updated_at' => now()]);
+
+        if ($moved !== 1) {
+            return back()->with('error', 'That order is no longer pending, so it was not approved.');
+        }
+
+        Log::info('Admin approved a pending order', [
+            'order_no' => $order->order_no,
+            'user_id' => $request->user()?->id,
+        ]);
+
+        return back()->with('status', "Order {$order->order_no} approved. Payment is still outstanding.");
+    }
+
+    /**
+     * Cancel an order that was never paid for.
+     *
+     * Paid orders are NOT cancelled here — money that arrived is settled with
+     * markRefunded(), which records the refund alongside the cancellation
+     * instead of quietly dropping the order while the customer is out of pocket.
+     */
+    public function cancel(Request $request, Order $order): RedirectResponse
+    {
+        if ($order->payment_status === PaymentStatus::Paid) {
+            return back()->with('error', 'That order is paid — record a refund instead of cancelling it.');
+        }
+
+        $cancelled = Order::query()
+            ->whereKey($order->id)
+            ->where('order_status', OrderStatus::Pending->value)
+            ->update(['order_status' => OrderStatus::Cancelled->value, 'updated_at' => now()]);
+
+        if ($cancelled !== 1) {
+            return back()->with('error', 'That order is no longer pending, so it was not cancelled.');
+        }
+
+        Log::info('Admin cancelled a pending order', [
+            'order_no' => $order->order_no,
+            'user_id' => $request->user()?->id,
+        ]);
+
+        return back()->with('status', "Order {$order->order_no} cancelled.");
+    }
+
+    /**
+     * Take an unpaid order off the list without destroying it.
+     *
+     * Soft: the row, its items and its number all survive, so the record of
+     * what happened is intact and it can be restored. A PAID order is never
+     * deletable — hiding an order the customer has money in is how a shop loses
+     * track of what it owes.
+     */
+    public function destroy(Request $request, Order $order): RedirectResponse
+    {
+        if ($order->payment_status === PaymentStatus::Paid) {
+            return back()->with('error', 'A paid order cannot be deleted. Record a refund instead.');
+        }
+
+        $order->delete();
+
+        Log::info('Admin deleted an order', [
+            'order_no' => $order->order_no,
+            'order_status' => $order->order_status->value,
+            'user_id' => $request->user()?->id,
+        ]);
+
+        return back()->with('status', "Order {$order->order_no} deleted.");
+    }
+
+    /**
      * Refunds are recorded, never processed — spec §14 lists `Refunded` as a
      * payment STATUS only, and Planning §3.2 keeps gateway refunds out of scope.
      *

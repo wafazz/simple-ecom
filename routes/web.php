@@ -148,6 +148,11 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
 
         Route::patch('/orders/{order:id}/refund', [OrderController::class, 'markRefunded'])->name('orders.refund');
 
+        // Row actions for an order that has not been paid for.
+        Route::patch('/orders/{order:id}/approve', [OrderController::class, 'approve'])->name('orders.approve');
+        Route::patch('/orders/{order:id}/cancel', [OrderController::class, 'cancel'])->name('orders.cancel');
+        Route::delete('/orders/{order:id}', [OrderController::class, 'destroy'])->name('orders.destroy');
+
         // Settings (REQ-011)
         Route::get('/settings', [SettingController::class, 'edit'])->name('settings.edit');
         Route::put('/settings', [SettingController::class, 'update'])->name('settings.update');
