@@ -16,13 +16,22 @@ class OrderPaid extends Mailable
     use Queueable;
     use SerializesModels;
 
-    public function __construct(public readonly Order $order) {}
+    /**
+     * @param  bool  $sample  Rendered for the admin's test send: the same
+     *                        message a customer gets, with a line saying so.
+     */
+    public function __construct(
+        public readonly Order $order,
+        public readonly bool $sample = false,
+    ) {}
 
     public function envelope(): Envelope
     {
         // The order number leads: it is what the customer quotes back when
         // they write in, and what they search their inbox for.
-        return new Envelope(subject: 'Order '.$this->order->order_no.' confirmed');
+        $subject = 'Order '.$this->order->order_no.' confirmed';
+
+        return new Envelope(subject: $this->sample ? '[Sample] '.$subject : $subject);
     }
 
     public function content(): Content
@@ -34,6 +43,7 @@ class OrderPaid extends Mailable
             // The admin-set shop name, not APP_NAME — that is a deployment
             // label, and the customer only recognises the shop.
             'storeName' => Setting::get('store_name') ?: config('app.name'),
+            'sample' => $this->sample,
         ]);
     }
 }

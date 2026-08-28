@@ -112,7 +112,7 @@
             </form>
 
             <div class="card mt-4">
-                <div class="card-header">Send a test message</div>
+                <div class="card-header">Send a sample order confirmation</div>
                 <div class="card-body">
                     <form method="POST" action="{{ route('admin.mail.test') }}"
                           data-confirm="Send a real test email now?">
@@ -123,18 +123,22 @@
                                    value="{{ old('test_to', auth()->user()?->email) }}"
                                    class="form-control @error('test_to') is-invalid @enderror">
                             <button class="btn btn-outline-primary" @disabled(! $configured)>
-                                <i class="bi bi-send me-1"></i>Send test
+                                <i class="bi bi-send me-1"></i>Send sample
                             </button>
                         </div>
                         @error('test_to') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
                     </form>
 
                     <div class="form-text mt-2">
-                        A real message, not a handshake. A server will accept a good password and
-                        still refuse to send from an address it does not own, and only sending
-                        finds that.
+                        Sends the real order confirmation, filled with a made-up order and marked
+                        as a sample — so this proves the server works <em>and</em> shows you exactly
+                        what a customer receives. Nothing is saved: no order, no order number, no
+                        stock movement.
+                        <br>
+                        A real send rather than a handshake, because a server will accept a good
+                        password and still refuse to send from an address it does not own.
                         @unless ($configured)
-                            <strong>Save a username, password and sender address first.</strong>
+                            <strong>Save a server, username, password and sender address first.</strong>
                         @endunless
                     </div>
 

@@ -8,6 +8,14 @@
 </x-mail::header>
 </x-slot:header>
 
+@if ($sample ?? false)
+<x-mail::panel>
+**This is a sample.** No order was placed and nobody has been charged. It is the
+message a customer receives once their payment clears, sent here so you can see
+exactly what they get.
+</x-mail::panel>
+@endif
+
 # Thank you — your order is confirmed
 
 We have received your payment and your order is being prepared.

@@ -2,7 +2,9 @@
 
 namespace Tests\Feature\Admin;
 
-use App\Mail\TestMessage;
+use App\Mail\OrderPaid;
+use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\Setting;
 use App\Models\User;
 use App\Support\IntegrationConfig;
@@ -209,7 +211,7 @@ class MailSettingTest extends TestCase
             ->post(route('admin.mail.test'), ['test_to' => 'someone@example.com'])
             ->assertRedirect();
 
-        Mail::assertSent(TestMessage::class, fn ($mail): bool => $mail->hasTo('someone@example.com'));
+        Mail::assertSent(OrderPaid::class, fn (OrderPaid $mail): bool => $mail->hasTo('someone@example.com') && $mail->sample);
 
         $result = session('test_result');
         $this->assertTrue($result['ok']);
@@ -229,6 +231,67 @@ class MailSettingTest extends TestCase
         $this->assertFalse($result['ok']);
         $this->assertStringContainsString('Not configured', $result['summary']);
         Mail::assertNothingSent();
+    }
+
+    #[Test]
+    public function the_test_shows_what_a_customer_would_receive(): void
+    {
+        Mail::fake();
+        $this->save();
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.mail.test'), ['test_to' => 'someone@example.com']);
+
+        Mail::assertSent(OrderPaid::class, function (OrderPaid $mail): bool {
+            $html = $mail->render();
+
+            return str_contains($html, 'sample')
+                && str_contains($html, 'Home Kit 2026/27')
+                // A printed nameset, so the admin sees one before a customer does.
+                && str_contains($html, 'AZLAN 10')
+                && str_contains($html, '203.00');
+        });
+    }
+
+    #[Test]
+    public function the_sample_subject_is_marked_as_one(): void
+    {
+        Mail::fake();
+        $this->save();
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.mail.test'), ['test_to' => 'someone@example.com']);
+
+        Mail::assertSent(OrderPaid::class, fn (OrderPaid $mail): bool => str_starts_with($mail->envelope()->subject, '[Sample]'));
+    }
+
+    #[Test]
+    public function the_test_never_creates_an_order(): void
+    {
+        Mail::fake();
+        $this->save();
+
+        $before = Order::withTrashed()->count();
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.mail.test'), ['test_to' => 'someone@example.com']);
+
+        // Nothing is saved: no row, no order number consumed, no stock moved.
+        $this->assertSame($before, Order::withTrashed()->count());
+        $this->assertSame(0, OrderItem::count());
+    }
+
+    #[Test]
+    public function a_real_confirmation_is_not_marked_as_a_sample(): void
+    {
+        $order = Order::factory()->create();
+        $order->setRelation('items', collect());
+
+        $mail = new OrderPaid($order);
+
+        $this->assertFalse($mail->sample);
+        $this->assertStringNotContainsString('[Sample]', $mail->envelope()->subject);
+        $this->assertStringNotContainsString('No order was placed', $mail->render());
     }
 
     #[Test]
@@ -281,6 +344,6 @@ class MailSettingTest extends TestCase
             ->assertOk()
             ->assertSee('SMTP server')
             ->assertSee('Not configured')
-            ->assertSee('Send test');
+            ->assertSee('Send sample');
     }
 }

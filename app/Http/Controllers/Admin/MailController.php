@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\MailSettingRequest;
-use App\Mail\TestMessage;
+use App\Mail\OrderPaid;
+use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\Setting;
 use App\Support\IntegrationConfig;
 use App\Support\MailSettings;
@@ -92,8 +94,10 @@ class MailController extends Controller
         }
 
         try {
+            // The real confirmation, so the test proves the transport AND shows
+            // the admin exactly what a customer receives.
             Mail::to($data['test_to'])->send(
-                new TestMessage((string) Setting::get('store_name')),
+                new OrderPaid($this->sampleOrder(), sample: true),
             );
 
             $ok = true;
@@ -121,6 +125,70 @@ class MailController extends Controller
             'raw' => $raw,
             'note' => $ok ? null : $this->hintFor($raw),
         ], fn ($v): bool => $v !== null));
+    }
+
+    /**
+     * A believable order that is never saved.
+     *
+     * Built in memory rather than read from the orders table: a real order
+     * would put a real customer's name and address into a message sent to
+     * whatever address was typed into the box, and a shop with no orders yet
+     * could not test at all.
+     *
+     * Nothing here touches the database, so no row, no order number and no
+     * stock movement follows from pressing the button.
+     */
+    private function sampleOrder(): Order
+    {
+        $order = new Order([
+            'order_no' => 'ORD-'.now()->format('Ymd').'-0001',
+            'customer_name' => 'Ahmad Faiz',
+            'customer_email' => 'customer@example.com',
+            'customer_phone' => '0123456789',
+            'address_line' => '12 Jalan Contoh',
+            'city' => 'George Town',
+            'state' => 'MY-07',
+            'postcode' => '10450',
+            'country' => 'MY',
+        ]);
+
+        // Totals are guarded out of $fillable on the real model, so they are
+        // set the same way the checkout sets them.
+        $order->forceFill([
+            'subtotal_minor' => 19500,
+            'shipping_fee_minor' => 800,
+            'grand_total_minor' => 20300,
+            'created_at' => now(),
+        ]);
+
+        // Two lines on purpose: one plain, one printed, so the admin sees how
+        // a nameset appears before a customer ever does.
+        $items = collect([
+            new OrderItem([
+                'product_name' => 'Home Kit 2026/27',
+                'variation_label' => 'M',
+                'sku' => 'SAMPLE-M',
+                'nameset_name' => 'AZLAN',
+                'nameset_number' => '10',
+                'nameset_price_minor' => 1500,
+                'unit_price_minor' => 9000,
+                'qty' => 1,
+                'line_total_minor' => 10500,
+            ]),
+            new OrderItem([
+                'product_name' => 'Training Tee',
+                'variation_label' => 'L',
+                'sku' => 'SAMPLE-L',
+                'unit_price_minor' => 4500,
+                'qty' => 2,
+                'line_total_minor' => 9000,
+            ]),
+        ]);
+
+        // Set rather than loaded: an unsaved order has nothing to load.
+        $order->setRelation('items', $items);
+
+        return $order;
     }
 
     /** Turn the common transport failures into something to actually do. */
