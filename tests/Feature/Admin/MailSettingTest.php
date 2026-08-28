@@ -199,6 +199,104 @@ class MailSettingTest extends TestCase
         }
     }
 
+    // ----------------------------------------------------------- the switch
+
+    #[Test]
+    public function customer_email_starts_switched_off(): void
+    {
+        $this->assertFalse(MailSettings::isEnabled());
+        $this->assertFalse(MailSettings::sendsToCustomers());
+    }
+
+    #[Test]
+    public function an_admin_switches_customer_email_on_and_off(): void
+    {
+        $this->save();
+
+        $this->actingAs($this->admin)->patch(route('admin.mail.toggle'))->assertRedirect();
+        $this->assertTrue(MailSettings::isEnabled());
+        $this->assertTrue(MailSettings::sendsToCustomers());
+
+        $this->actingAs($this->admin)->patch(route('admin.mail.toggle'));
+        $this->assertFalse(MailSettings::isEnabled());
+    }
+
+    #[Test]
+    public function switching_off_keeps_the_credentials(): void
+    {
+        $this->save();
+        MailSettings::setEnabled(true);
+
+        $this->actingAs($this->admin)->patch(route('admin.mail.toggle'));
+
+        // Turning it off is not the same as forgetting how to send.
+        $this->assertTrue(MailSettings::isConfigured());
+        $this->assertSame('super-secret', IntegrationConfig::get('mail.smtp_password'));
+    }
+
+    #[Test]
+    public function switched_on_without_settings_is_not_sending(): void
+    {
+        MailSettings::setEnabled(true);
+
+        // Willing but unable. The screen has to say which, or an admin spends
+        // the afternoon wondering why nothing arrives.
+        $this->assertTrue(MailSettings::isEnabled());
+        $this->assertFalse(MailSettings::sendsToCustomers());
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.mail.edit'))
+            ->assertOk()
+            ->assertSee('Active, but not configured');
+    }
+
+    #[Test]
+    public function the_screen_states_which_of_the_three_states_it_is_in(): void
+    {
+        $this->actingAs($this->admin)->get(route('admin.mail.edit'))
+            ->assertOk()->assertSee('Inactive');
+
+        $this->save();
+        MailSettings::setEnabled(true);
+
+        $this->actingAs($this->admin)->get(route('admin.mail.edit'))
+            ->assertOk()->assertSee('Buyers are emailed an order confirmation');
+    }
+
+    #[Test]
+    public function the_sample_sends_while_customer_email_is_off(): void
+    {
+        Mail::fake();
+        $this->save();
+
+        $this->assertFalse(MailSettings::isEnabled());
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.mail.test'), ['test_to' => 'someone@example.com']);
+
+        // The whole point of the switch: prove the settings without anybody
+        // outside hearing about it.
+        Mail::assertSent(OrderPaid::class);
+    }
+
+    #[Test]
+    public function a_guest_cannot_switch_it_on(): void
+    {
+        // Seeded directly, not through save(): actingAs() persists for the rest
+        // of a test, so posting the form first would leave this request
+        // authenticated and the assertion would prove nothing.
+        Setting::put('mail_smtp_host', 'mail.example.com');
+        IntegrationConfig::put('mail.smtp_username', 'hello@example.com');
+        IntegrationConfig::put('mail.smtp_password', 'super-secret');
+        Setting::put('mail_from_address', 'hello@example.com');
+
+        $this->assertGuest();
+
+        $this->patch(route('admin.mail.toggle'))->assertRedirect(route('admin.login'));
+
+        $this->assertFalse(MailSettings::isEnabled());
+    }
+
     // ----------------------------------------------------------- the button
 
     #[Test]

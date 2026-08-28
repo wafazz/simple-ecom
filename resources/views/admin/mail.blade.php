@@ -5,6 +5,49 @@
 @section('content')
     <x-alerts />
 
+    {{-- The state anyone opening this screen needs first: is a customer being
+         emailed right now, or not. --}}
+    <div class="card mb-4">
+        <div class="card-body d-flex flex-wrap align-items-center gap-3">
+            <div class="flex-grow-1">
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <strong>Customer email</strong>
+                    @if ($sending)
+                        <span class="badge text-bg-success">Active</span>
+                    @elseif ($enabled)
+                        <span class="badge text-bg-warning">Active, but not configured</span>
+                    @else
+                        <span class="badge text-bg-secondary">Inactive</span>
+                    @endif
+                </div>
+
+                <p class="text-muted small mb-0">
+                    @if ($sending)
+                        Buyers are emailed an order confirmation when their payment clears.
+                    @elseif ($enabled)
+                        Switched on, but the settings below are incomplete, so nothing can be
+                        sent. Finish them and this becomes Active.
+                    @else
+                        Buyers are <strong>not</strong> emailed. Orders complete as normal.
+                        The sample button below still works, so you can set this up and prove
+                        it without anybody outside hearing about it.
+                    @endif
+                </p>
+            </div>
+
+            <form method="POST" action="{{ route('admin.mail.toggle') }}"
+                  data-confirm="{{ $enabled
+                        ? 'Turn customer email OFF? Buyers will stop receiving order confirmations.'
+                        : 'Turn customer email ON? Buyers will be emailed when their payment clears.' }}">
+                @csrf @method('PATCH')
+                <button class="btn {{ $enabled ? 'btn-outline-danger' : 'btn-shop' }}">
+                    <i class="bi bi-{{ $enabled ? 'pause' : 'play' }}-circle me-1"></i>
+                    {{ $enabled ? 'Switch off' : 'Switch on' }}
+                </button>
+            </form>
+        </div>
+    </div>
+
     <div class="row g-4">
         <div class="col-lg-7">
             <form method="POST" action="{{ route('admin.mail.update') }}">
@@ -14,7 +57,7 @@
                     <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
                         <span>SMTP server</span>
                         @if ($configured)
-                            <span class="badge text-bg-success">Ready to send</span>
+                            <span class="badge text-bg-success">Settings complete</span>
                         @else
                             <span class="badge text-bg-secondary">Not configured</span>
                         @endif
@@ -186,12 +229,16 @@
                         is verified, with the items, totals and delivery address.
                     </p>
                     <p>
-                        While this screen says <strong>Not configured</strong>, nothing is sent
-                        at all. Orders still complete normally; customers simply do not get an
-                        email.
+                        Nothing reaches a buyer unless the settings are complete
+                        <em>and</em> the switch is on. Orders always complete either way;
+                        customers simply do not get an email.
+                    </p>
+                    <p>
+                        The switch at the top decides whether buyers are emailed. The sample
+                        button ignores it, so you can test at any time.
                     </p>
                     <p class="mb-0">
-                        Send yourself a test and check the <strong>spam folder</strong>, not just
+                        Send yourself a sample and check the <strong>spam folder</strong>, not just
                         the inbox. A confirmation that arrives in spam has still failed. If mail
                         lands there, the fix is SPF and DKIM records on your domain rather than
                         anything on this screen.

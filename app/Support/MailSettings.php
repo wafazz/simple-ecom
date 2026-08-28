@@ -54,6 +54,36 @@ final class MailSettings
         return Setting::get('mail_from_name') ?: Setting::get('store_name') ?: config('mail.from.name');
     }
 
+    /**
+     * The master switch.
+     *
+     * OFF by default. A shop that has just saved credentials is mid-setup, and
+     * the safe failure there is a customer who gets no email — not a customer
+     * who gets one while the sender address is still being argued with.
+     */
+    public static function isEnabled(): bool
+    {
+        return (bool) Setting::get('mail_enabled', false);
+    }
+
+    public static function setEnabled(bool $enabled): void
+    {
+        Setting::put('mail_enabled', $enabled ? '1' : '0');
+    }
+
+    /**
+     * May a message go to a CUSTOMER?
+     *
+     * Both halves are required: a working transport, and someone having
+     * decided to use it. The admin's own test send deliberately asks only
+     * isConfigured(), so a shop can prove its settings without anybody outside
+     * hearing about it.
+     */
+    public static function sendsToCustomers(): bool
+    {
+        return self::isConfigured() && self::isEnabled();
+    }
+
     /** Enough to actually send: a server, a login and a sender. */
     public static function isConfigured(): bool
     {

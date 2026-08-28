@@ -39,6 +39,8 @@ class MailController extends Controller
             'fromName' => MailSettings::fromName(),
             'passwordSet' => filled(IntegrationConfig::get('mail.smtp_password')),
             'configured' => MailSettings::isConfigured(),
+            'enabled' => MailSettings::isEnabled(),
+            'sending' => MailSettings::sendsToCustomers(),
             'passwordSource' => IntegrationConfig::source('mail.smtp_password'),
         ]);
     }
@@ -70,6 +72,28 @@ class MailController extends Controller
         ]);
 
         return redirect()->route('admin.mail.edit')->with('status', 'Mail settings saved.');
+    }
+
+    /**
+     * Turn customer email on or off, without touching the credentials.
+     *
+     * Switching off leaves the transport intact and the test button working,
+     * so an admin can keep proving the settings while customers hear nothing.
+     */
+    public function toggle(Request $request): RedirectResponse
+    {
+        $enabled = ! MailSettings::isEnabled();
+
+        MailSettings::setEnabled($enabled);
+
+        Log::info('Customer email switched', [
+            'enabled' => $enabled,
+            'user_id' => $request->user()?->id,
+        ]);
+
+        return back()->with('status', $enabled
+            ? 'Customer email is ACTIVE. Buyers will be emailed when their payment clears.'
+            : 'Customer email is INACTIVE. Nothing is sent to buyers; the sample button still works.');
     }
 
     /**

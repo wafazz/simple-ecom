@@ -167,6 +167,10 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
         Route::get('/mail', [MailController::class, 'edit'])->name('mail.edit');
         Route::put('/mail', [MailController::class, 'update'])->name('mail.update');
 
+        // The master switch for customer email. Separate from the credentials,
+        // so turning it off never risks losing them.
+        Route::patch('/mail/toggle', [MailController::class, 'toggle'])->name('mail.toggle');
+
         // Throttled: each press is a real message leaving the server.
         Route::post('/mail/test', [MailController::class, 'test'])
             ->middleware('throttle:10,1')

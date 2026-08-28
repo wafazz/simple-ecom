@@ -254,9 +254,15 @@ class PaymentController extends Controller
      */
     private function confirmByEmail(Order $order): void
     {
-        if (! MailSettings::isConfigured()) {
-            Log::info('Order confirmation not sent — no mail transport configured', [
+        if (! MailSettings::sendsToCustomers()) {
+            // Two different situations, and the difference is what someone
+            // reading the log needs: nothing set up at all, versus set up and
+            // deliberately switched off.
+            Log::info('Order confirmation not sent', [
                 'order_no' => $order->order_no,
+                'reason' => MailSettings::isConfigured()
+                    ? 'customer email is switched off'
+                    : 'no mail transport configured',
             ]);
 
             return;

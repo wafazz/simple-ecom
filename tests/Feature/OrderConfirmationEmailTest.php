@@ -10,6 +10,7 @@ use App\Models\Payment;
 use App\Models\ProductVariant;
 use App\Models\Setting;
 use App\Support\IntegrationConfig;
+use App\Support\MailSettings;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
@@ -48,6 +49,9 @@ class OrderConfirmationEmailTest extends TestCase
         IntegrationConfig::put('mail.smtp_username', 'hello@example.com');
         IntegrationConfig::put('mail.smtp_password', 'secret');
         Setting::put('mail_from_address', 'hello@example.com');
+
+        // Configured is not the same as switched on.
+        MailSettings::setEnabled(true);
     }
 
     private function order(): Order
@@ -172,6 +176,41 @@ class OrderConfirmationEmailTest extends TestCase
         $this->settle();
 
         Mail::assertNothingSent();
+    }
+
+    #[Test]
+    public function switching_customer_email_off_stops_the_confirmation(): void
+    {
+        $this->configureMail();
+        MailSettings::setEnabled(false);
+
+        $this->order();
+        $this->settle();
+
+        // The transport still works — the shop has simply decided not to use
+        // it for buyers.
+        Mail::assertNothingSent();
+    }
+
+    #[Test]
+    public function switching_it_off_still_settles_the_payment(): void
+    {
+        $this->configureMail();
+        MailSettings::setEnabled(false);
+
+        $order = $this->order();
+        $this->settle();
+
+        $this->assertSame(PaymentStatus::Paid, $order->fresh()->payment_status);
+    }
+
+    #[Test]
+    public function it_is_off_until_somebody_turns_it_on(): void
+    {
+        // A shop that has just saved credentials is mid-setup. The safe failure
+        // there is a buyer with no email, not a buyer emailed from a sender
+        // still being argued with.
+        $this->assertFalse(MailSettings::isEnabled());
     }
 
     // ------------------------------------------------------------- failures
