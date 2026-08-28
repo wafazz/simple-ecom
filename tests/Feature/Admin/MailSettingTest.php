@@ -13,7 +13,7 @@ use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
 /**
- * Mailgun over SMTP, configured from the admin panel.
+ * Outgoing mail over SMTP, configured from the admin panel.
  *
  * The password is the thing to be careful with: encrypted at rest, never
  * rendered back, and a blank box means "unchanged" rather than "delete" —
@@ -34,9 +34,9 @@ class MailSettingTest extends TestCase
     private function payload(array $overrides = []): array
     {
         return array_merge([
-            'mailgun_smtp_host' => 'smtp.mailgun.org',
-            'mailgun_smtp_port' => '587',
-            'smtp_username' => 'postmaster@mg.example.com',
+            'mail_smtp_host' => 'mail.example.com',
+            'mail_smtp_port' => '587',
+            'smtp_username' => 'hello@example.com',
             'smtp_password' => 'super-secret',
             'mail_from_address' => 'hello@example.com',
             'mail_from_name' => 'Kedai Contoh',
@@ -52,12 +52,12 @@ class MailSettingTest extends TestCase
     // ------------------------------------------------------------- settings
 
     #[Test]
-    public function an_admin_saves_the_mailgun_credentials(): void
+    public function an_admin_saves_the_smtp_credentials(): void
     {
         $this->save()->assertRedirect(route('admin.mail.edit'))->assertSessionHas('status');
 
-        $this->assertSame('postmaster@mg.example.com', IntegrationConfig::get('mailgun.smtp_username'));
-        $this->assertSame('super-secret', IntegrationConfig::get('mailgun.smtp_password'));
+        $this->assertSame('hello@example.com', IntegrationConfig::get('mail.smtp_username'));
+        $this->assertSame('super-secret', IntegrationConfig::get('mail.smtp_password'));
         $this->assertSame('hello@example.com', MailSettings::fromAddress());
         $this->assertSame(587, MailSettings::port());
     }
@@ -67,7 +67,7 @@ class MailSettingTest extends TestCase
     {
         $this->save();
 
-        $stored = \DB::table('secure_settings')->where('key', 'mailgun.smtp_password')->value('value');
+        $stored = \DB::table('secure_settings')->where('key', 'mail.smtp_password')->value('value');
 
         $this->assertNotSame('super-secret', $stored);
         $this->assertStringNotContainsString('super-secret', (string) $stored);
@@ -94,14 +94,14 @@ class MailSettingTest extends TestCase
         // "unchanged" — treating it as "clear" would silently break sending.
         $this->save(['smtp_password' => '', 'mail_from_name' => 'Renamed Shop']);
 
-        $this->assertSame('super-secret', IntegrationConfig::get('mailgun.smtp_password'));
+        $this->assertSame('super-secret', IntegrationConfig::get('mail.smtp_password'));
         $this->assertSame('Renamed Shop', MailSettings::fromName());
     }
 
     #[Test]
     public function an_unknown_port_is_refused(): void
     {
-        $this->save(['mailgun_smtp_port' => '25'])->assertSessionHasErrors('mailgun_smtp_port');
+        $this->save(['mail_smtp_port' => '25'])->assertSessionHasErrors('mail_smtp_port');
     }
 
     #[Test]
@@ -119,27 +119,27 @@ class MailSettingTest extends TestCase
 
         // An unconfigured shop keeps MAIL_MAILER, which writes to the log
         // rather than failing.
-        $this->assertNotSame('smtp.mailgun.org', config('mail.mailers.smtp.host'));
+        $this->assertNotSame('mail.example.com', config('mail.mailers.smtp.host'));
     }
 
     #[Test]
-    public function saved_settings_point_the_mailer_at_mailgun(): void
+    public function saved_settings_point_the_mailer_at_the_server(): void
     {
         $this->save();
 
         MailSettings::apply();
 
         $this->assertSame('smtp', config('mail.default'));
-        $this->assertSame('smtp.mailgun.org', config('mail.mailers.smtp.host'));
+        $this->assertSame('mail.example.com', config('mail.mailers.smtp.host'));
         $this->assertSame(587, config('mail.mailers.smtp.port'));
-        $this->assertSame('postmaster@mg.example.com', config('mail.mailers.smtp.username'));
+        $this->assertSame('hello@example.com', config('mail.mailers.smtp.username'));
         $this->assertSame('hello@example.com', config('mail.from.address'));
     }
 
     #[Test]
     public function port_465_uses_implicit_tls(): void
     {
-        $this->save(['mailgun_smtp_port' => '465']);
+        $this->save(['mail_smtp_port' => '465']);
 
         MailSettings::apply();
 
@@ -151,7 +151,7 @@ class MailSettingTest extends TestCase
     #[Test]
     public function port_2525_uses_starttls(): void
     {
-        $this->save(['mailgun_smtp_port' => '2525']);
+        $this->save(['mail_smtp_port' => '2525']);
 
         MailSettings::apply();
 
@@ -210,8 +210,8 @@ class MailSettingTest extends TestCase
 
         // Nothing is listening on this host, so the transport raises rather
         // than the application deciding it succeeded.
-        Setting::put('mailgun_smtp_host', '127.0.0.1');
-        Setting::put('mailgun_smtp_port', '2525');
+        Setting::put('mail_smtp_host', '127.0.0.1');
+        Setting::put('mail_smtp_port', '2525');
         config(['mail.mailers.smtp.timeout' => 1]);
 
         $this->actingAs($this->admin)
@@ -232,7 +232,7 @@ class MailSettingTest extends TestCase
         $this->put(route('admin.mail.update'), $this->payload())->assertRedirect(route('admin.login'));
         $this->post(route('admin.mail.test'), ['test_to' => 'x@example.com'])->assertRedirect(route('admin.login'));
 
-        $this->assertNull(IntegrationConfig::get('mailgun.smtp_password'));
+        $this->assertNull(IntegrationConfig::get('mail.smtp_password'));
     }
 
     #[Test]
@@ -241,7 +241,7 @@ class MailSettingTest extends TestCase
         $this->actingAs($this->admin)
             ->get(route('admin.mail.edit'))
             ->assertOk()
-            ->assertSee('Mailgun SMTP')
+            ->assertSee('SMTP server')
             ->assertSee('Not configured')
             ->assertSee('Send test');
     }

@@ -36,21 +36,23 @@ return [
     ],
 
     /*
-     * Mailgun, over SMTP rather than the HTTP API.
+     * Outgoing mail, over SMTP.
      *
-     * The API driver needs symfony/mailgun-mailer, and pulling it in drags the
-     * Symfony tree to a version requiring PHP 8.4 while this project pins the
-     * platform to 8.3 to match the server. SMTP needs no package at all and
-     * Mailgun supports both equally.
+     * Any provider works — a transactional service like Mailgun or Postmark,
+     * or the shop's own mailbox on its hosting. SMTP is deliberate rather than
+     * a provider's HTTP API: the API drivers each need their own package, and
+     * pulling one in drags the Symfony tree to a release requiring PHP 8.4
+     * while this project pins the platform to 8.3 to match the server.
      *
-     * Port matters more than it looks: many hosts block 587 outbound, and 2525
-     * is Mailgun's unblocked alternative. It is admin-settable for that reason.
+     * Port matters more than it looks. Many hosts block 587 outbound, 2525 is
+     * the usual unblocked alternative, and 465 speaks TLS from the first byte
+     * rather than upgrading — so it is chosen, not assumed.
      */
-    'mailgun' => [
-        'smtp_host' => env('MAILGUN_SMTP_HOST', 'smtp.mailgun.org'),
-        'smtp_port' => env('MAILGUN_SMTP_PORT', 587),
-        'smtp_username' => env('MAILGUN_SMTP_USERNAME'),
-        'smtp_password' => env('MAILGUN_SMTP_PASSWORD'),
+    'mail' => [
+        'smtp_host' => env('MAIL_SMTP_HOST'),
+        'smtp_port' => env('MAIL_SMTP_PORT', 587),
+        'smtp_username' => env('MAIL_SMTP_USERNAME'),
+        'smtp_password' => env('MAIL_SMTP_PASSWORD'),
     ],
 
     // REQ-005 — ToyyibPay. Planning §11.A.2.

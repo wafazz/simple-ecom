@@ -44,8 +44,9 @@ class OrderConfirmationEmailTest extends TestCase
 
     private function configureMail(): void
     {
-        IntegrationConfig::put('mailgun.smtp_username', 'postmaster@mg.example.com');
-        IntegrationConfig::put('mailgun.smtp_password', 'secret');
+        Setting::put('mail_smtp_host', 'smtp.example.com');
+        IntegrationConfig::put('mail.smtp_username', 'hello@example.com');
+        IntegrationConfig::put('mail.smtp_password', 'secret');
         Setting::put('mail_from_address', 'hello@example.com');
     }
 
@@ -163,7 +164,8 @@ class OrderConfirmationEmailTest extends TestCase
     {
         // A username with no password cannot send; attempting it on every
         // payment would raise on every payment.
-        IntegrationConfig::put('mailgun.smtp_username', 'postmaster@mg.example.com');
+        Setting::put('mail_smtp_host', 'smtp.example.com');
+        IntegrationConfig::put('mail.smtp_username', 'hello@example.com');
         Setting::put('mail_from_address', 'hello@example.com');
 
         $this->order();

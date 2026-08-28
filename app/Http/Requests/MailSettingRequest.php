@@ -18,10 +18,10 @@ class MailSettingRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'mailgun_smtp_host' => ['required', 'string', 'max:255'],
-            'mailgun_smtp_port' => ['required', Rule::in(array_keys(MailSettings::PORTS))],
+            'mail_smtp_host' => ['required', 'string', 'max:255'],
+            'mail_smtp_port' => ['required', Rule::in(array_keys(MailSettings::PORTS))],
 
-            // Mailgun's SMTP login, e.g. postmaster@mg.your-domain.com
+            // Usually the full email address the mail is sent from.
             'smtp_username' => ['nullable', 'string', 'max:255'],
 
             // Blank means "leave the stored one alone" — the form never shows
@@ -29,8 +29,8 @@ class MailSettingRequest extends FormRequest
             // action, as with every other credential here.
             'smtp_password' => ['nullable', 'string', 'max:255'],
 
-            // Mailgun rejects a sender outside the verified domain, so this is
-            // checked as an address before it can fail as a send.
+            // Most servers only allow sending FROM the account that logged in,
+            // so this is checked as an address before it can fail as a send.
             'mail_from_address' => ['required', 'email', 'max:255'],
             'mail_from_name' => ['required', 'string', 'max:255'],
         ];
@@ -40,8 +40,8 @@ class MailSettingRequest extends FormRequest
     public function attributes(): array
     {
         return [
-            'mailgun_smtp_host' => 'SMTP host',
-            'mailgun_smtp_port' => 'SMTP port',
+            'mail_smtp_host' => 'SMTP host',
+            'mail_smtp_port' => 'SMTP port',
             'smtp_username' => 'SMTP username',
             'smtp_password' => 'SMTP password',
             'mail_from_address' => 'sender address',

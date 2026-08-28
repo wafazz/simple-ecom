@@ -7,10 +7,10 @@ use App\Models\Setting;
 /**
  * The mail transport, assembled from what the admin saved.
  *
- * Mailgun over SMTP. The HTTP API driver would need symfony/mailgun-mailer,
- * and adding it drags the Symfony tree to a release requiring PHP 8.4 while
- * this project pins the platform to 8.3 to match the server. SMTP is the same
- * Mailgun account and needs no package.
+ * Plain SMTP, so any provider works — a transactional service, or the shop's
+ * own mailbox on its hosting. A provider's HTTP API would need that provider's
+ * package, and pulling one in drags the Symfony tree to a release requiring
+ * PHP 8.4 while this project pins the platform to 8.3 to match the server.
  *
  * apply() is called when the mailer is first RESOLVED, not on every request —
  * see AppServiceProvider. secure_settings is deliberately never cached, so a
@@ -18,7 +18,7 @@ use App\Models\Setting;
  */
 final class MailSettings
 {
-    /** Ports Mailgun accepts. 2525 exists because hosts block 587. */
+    /** The ports worth offering. 2525 exists because hosts block 587. */
     public const PORTS = [
         '587' => '587 — standard (STARTTLS)',
         '2525' => '2525 — alternative, when 587 is blocked',
@@ -29,17 +29,17 @@ final class MailSettings
 
     public static function username(): ?string
     {
-        return IntegrationConfig::get('mailgun.smtp_username');
+        return IntegrationConfig::get('mail.smtp_username');
     }
 
     public static function host(): string
     {
-        return (string) (Setting::get('mailgun_smtp_host') ?: config('services.mailgun.smtp_host'));
+        return (string) (Setting::get('mail_smtp_host') ?: config('services.mail.smtp_host'));
     }
 
     public static function port(): int
     {
-        $port = (string) (Setting::get('mailgun_smtp_port') ?: config('services.mailgun.smtp_port'));
+        $port = (string) (Setting::get('mail_smtp_port') ?: config('services.mail.smtp_port'));
 
         return array_key_exists($port, self::PORTS) ? (int) $port : 587;
     }
@@ -54,16 +54,17 @@ final class MailSettings
         return Setting::get('mail_from_name') ?: Setting::get('store_name') ?: config('mail.from.name');
     }
 
-    /** Enough to actually send: a username, a password and a sender. */
+    /** Enough to actually send: a server, a login and a sender. */
     public static function isConfigured(): bool
     {
-        return filled(self::username())
-            && filled(IntegrationConfig::get('mailgun.smtp_password'))
+        return filled(self::host())
+            && filled(self::username())
+            && filled(IntegrationConfig::get('mail.smtp_password'))
             && filled(self::fromAddress());
     }
 
     /**
-     * Point Laravel's SMTP mailer at Mailgun.
+     * Point Laravel's SMTP mailer at the configured server.
      *
      * Does nothing while the credentials are incomplete, so an unconfigured
      * shop keeps whatever MAIL_MAILER says — `log` by default, which writes to
@@ -82,7 +83,7 @@ final class MailSettings
             'mail.mailers.smtp.host' => self::host(),
             'mail.mailers.smtp.port' => $port,
             'mail.mailers.smtp.username' => self::username(),
-            'mail.mailers.smtp.password' => IntegrationConfig::get('mailgun.smtp_password'),
+            'mail.mailers.smtp.password' => IntegrationConfig::get('mail.smtp_password'),
             // 465 speaks TLS from the first byte; 587 and 2525 upgrade with
             // STARTTLS. Naming the wrong one hangs until the timeout.
             'mail.mailers.smtp.scheme' => $port === 465 ? 'smtps' : 'smtp',
