@@ -159,6 +159,44 @@ class MailSettingTest extends TestCase
         $this->assertSame(2525, config('mail.mailers.smtp.port'));
     }
 
+    #[Test]
+    public function the_saved_port_comes_back_selected(): void
+    {
+        $this->save(['mail_smtp_port' => '465']);
+
+        $html = $this->actingAs($this->admin)
+            ->get(route('admin.mail.edit'))->assertOk()->getContent();
+
+        // The value was always stored correctly; it was the FORM that showed
+        // 587, because no option carried `selected` and the browser fell back
+        // to the first. Pressing save then wrote 587 over the real choice, so
+        // this reads as "the port will not save".
+        $this->assertMatchesRegularExpression(
+            '/<option value="465"\s+selected/',
+            $html,
+            'The stored port is not marked selected, so the form shows the wrong one.',
+        );
+
+        $this->assertDoesNotMatchRegularExpression('/<option value="587"\s+selected/', $html);
+    }
+
+    #[Test]
+    public function every_offered_port_survives_a_round_trip(): void
+    {
+        foreach (array_keys(MailSettings::PORTS) as $port) {
+            $this->save(['mail_smtp_port' => (string) $port]);
+
+            $html = $this->actingAs($this->admin)
+                ->get(route('admin.mail.edit'))->assertOk()->getContent();
+
+            $this->assertMatchesRegularExpression(
+                '/<option value="'.$port.'"\s+selected/',
+                $html,
+                "Port {$port} does not come back selected.",
+            );
+        }
+    }
+
     // ----------------------------------------------------------- the button
 
     #[Test]

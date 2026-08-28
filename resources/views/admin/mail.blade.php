@@ -38,8 +38,16 @@
                             <label for="mail_smtp_port" class="form-label">Port</label>
                             <select name="mail_smtp_port" id="mail_smtp_port"
                                     class="form-select @error('mail_smtp_port') is-invalid @enderror">
+                                {{-- Both sides cast to string. PHP turns numeric array
+                                     keys into integers, so $value is int 465 while the
+                                     stored setting is the string '465' — a strict
+                                     comparison matched nothing, no option was marked
+                                     selected, and the browser fell back to the first
+                                     one. Saving then wrote that back over the real
+                                     choice. --}}
                                 @foreach ($ports as $value => $label)
-                                    <option value="{{ $value }}" @selected(old('mail_smtp_port', $port) === $value)>{{ $label }}</option>
+                                    <option value="{{ $value }}"
+                                            @selected((string) old('mail_smtp_port', $port) === (string) $value)>{{ $label }}</option>
                                 @endforeach
                             </select>
                             @error('mail_smtp_port') <div class="invalid-feedback">{{ $message }}</div> @enderror
