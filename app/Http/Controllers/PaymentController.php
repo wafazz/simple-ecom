@@ -8,6 +8,7 @@ use App\Mail\OrderPaid;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Models\ProductVariant;
+use App\Services\OrderRelayService;
 use App\Services\ToyyibPayService;
 use App\Support\MailSettings;
 use App\Support\PaymentVerification;
@@ -240,6 +241,11 @@ class PaymentController extends Controller
         // the customer twice.
         if ($settled) {
             $this->confirmByEmail($order);
+
+            // Inside the same $settled gate, and for the same reason: ToyyibPay
+            // sends both a return and a callback for one payment, so anything
+            // not gated on markPaidAtomically() would post the order twice.
+            OrderRelayService::fromConfig()->send($order);
         }
     }
 

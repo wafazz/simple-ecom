@@ -60,12 +60,25 @@ return [
     |--------------------------------------------------------------------------
     |
     | Here you may specify the default timezone for your application, which
-    | will be used by the PHP date and date-time functions. The timezone
-    | is set to "UTC" by default as it is suitable for most use cases.
+    | will be used by the PHP date and date-time functions.
+    |
+    | Malaysia, not Laravel's UTC default. The shop, its staff and every buyer
+    | are in one timezone, so an order placed at 14:00 has to read 14:00 on the
+    | confirmation email, in the admin order list and in the dashboard's daily
+    | figures alike. Converting at each display point instead would mean every
+    | one of those sites remembering to do it, and the one that forgot would be
+    | wrong by eight hours without looking wrong.
+    |
+    | Safe to store local time here specifically because Malaysia has no
+    | daylight saving: +08:00 all year, so no wall-clock time is ever ambiguous
+    | or missing. Do NOT copy this reasoning to a region that observes DST.
+    |
+    | Timestamps written BEFORE this changed were stored as UTC and will read
+    | eight hours early. See DEPLOYMENT.md.
     |
     */
 
-    'timezone' => 'UTC',
+    'timezone' => env('APP_TIMEZONE', 'Asia/Kuala_Lumpur'),
 
     /*
     |--------------------------------------------------------------------------
