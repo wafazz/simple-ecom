@@ -27,6 +27,13 @@
         <env name="DB_DATABASE" value=":memory:"/>
         <env name="DB_URL" value=""/>
         <env name="MAIL_MAILER" value="array"/>
+        <!-- Off unless a test opts in. Left to .env, a developer's real relay
+             URL leaks into every test: the suite would post settled orders to
+             a live endpoint, and assertions that inspect every recorded HTTP
+             request would trip over a payload they were never written for.
+             OrderRelayTest sets this itself. -->
+        <env name="ORDER_RELAY_URL" value=""/>
+        <env name="ORDER_RELAY_TOKEN" value=""/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
         <env name="PULSE_ENABLED" value="false"/>

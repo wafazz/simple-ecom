@@ -55,6 +55,31 @@ return [
         'smtp_password' => env('MAIL_SMTP_PASSWORD'),
     ],
 
+    /*
+     * Where a settled order is posted.
+     *
+     * This VPS blocks outbound SMTP — all of it, not just 587, so the port
+     * choice above cannot help and nothing this server sends leaves the box.
+     * The order details are therefore POSTed over 443 to an endpoint on
+     * another host, which does whatever it does with them. Nothing on this
+     * side knows or cares that the far end happens to send an email; this is a
+     * payload handed over, not a mail transport.
+     *
+     * With no URL set nothing is posted and orders complete exactly as now.
+     */
+    'order_relay' => [
+        'url' => env('ORDER_RELAY_URL'),
+
+        // Optional shared secret, sent as X-Relay-Token and repeated in the
+        // body. The endpoint decides whether to require it.
+        'token' => env('ORDER_RELAY_TOKEN'),
+
+        // The post happens inside the ToyyibPay callback, which the gateway is
+        // waiting on. Bounded, not generous.
+        'connect_timeout' => 5,
+        'timeout' => 15,
+    ],
+
     // REQ-005 — ToyyibPay. Planning §11.A.2.
     // env() is read here and nowhere else: after config:cache it returns null.
     'toyyibpay' => [
