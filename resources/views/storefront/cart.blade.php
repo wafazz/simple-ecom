@@ -39,30 +39,43 @@
                                 </span>
                             @endif
 
-                            <div class="flex-grow-1 min-w-0">
-                                <a href="{{ route('products.show', $line->variant->product) }}"
-                                   class="fw-semibold text-decoration-none d-block">
-                                    {{ $line->variant->product->name }}
-                                </a>
-                                @if ($line->variant->variationLabel() !== '')
-                                    <div class="text-muted small">{{ $line->variant->variationLabel() }}</div>
-                                @endif
-                                @if ($line->nameset)
-                                    <div class="small">
-                                        <span class="badge text-bg-light">Nameset</span>
-                                        {{ trim($line->nameset['name'].' '.$line->nameset['number']) }}
-                                        @if ($line->nameset_price_minor > 0)
-                                            <span class="text-muted">
-                                                +{{ $currencySymbol }}{{ \App\Support\Money::format($line->nameset_price_minor) }} per shirt
-                                            </span>
+                            <div class="cart-line__body">
+                                <div class="cart-line__head">
+                                    <div class="cart-line__title">
+                                        <a href="{{ route('products.show', $line->variant->product) }}"
+                                           class="fw-semibold text-decoration-none d-block">
+                                            {{ $line->variant->product->name }}
+                                        </a>
+                                        @if ($line->variant->variationLabel() !== '')
+                                            <div class="text-muted small">{{ $line->variant->variationLabel() }}</div>
                                         @endif
+                                        @if ($line->nameset)
+                                            <div class="small">
+                                                <span class="badge text-bg-light">Nameset</span>
+                                                {{ trim($line->nameset['name'].' '.$line->nameset['number']) }}
+                                                @if ($line->nameset_price_minor > 0)
+                                                    <span class="text-muted">
+                                                        +{{ $currencySymbol }}{{ \App\Support\Money::format($line->nameset_price_minor) }} per shirt
+                                                    </span>
+                                                @endif
+                                            </div>
+                                        @endif
+                                        <div class="text-muted small"><code>{{ $line->variant->sku }}</code></div>
                                     </div>
-                                @endif
-                                <div class="text-muted small"><code>{{ $line->variant->sku }}</code></div>
+
+                                    <div class="cart-line__price">
+                                        <div class="fw-semibold money"><x-money :minor="$line->line_total_minor" /></div>
+                                        <div class="text-muted small money">
+                                            <x-money :minor="$line->unit_price_minor" /> each
+                                        </div>
+                                    </div>
+                                </div>
 
                                 <div class="d-flex align-items-center gap-2 mt-2 flex-wrap">
+                                    {{-- flex-wrap here too: the stepper plus Update is 204px that
+                                         cannot break, which is wider than the body gets on a phone. --}}
                                     <form method="POST" action="{{ route('cart.update', $line->variant->id) }}"
-                                          class="d-flex align-items-center gap-2">
+                                          class="d-flex align-items-center gap-2 flex-wrap">
                                         @csrf @method('PATCH')
                                         <div class="qty">
                                             <button type="button" data-qty-step="-1" aria-label="Decrease quantity">−</button>
@@ -79,13 +92,6 @@
                                             Remove
                                         </button>
                                     </form>
-                                </div>
-                            </div>
-
-                            <div class="text-end">
-                                <div class="fw-semibold money"><x-money :minor="$line->line_total_minor" /></div>
-                                <div class="text-muted small money">
-                                    <x-money :minor="$line->unit_price_minor" /> each
                                 </div>
                             </div>
                         </div>
