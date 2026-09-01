@@ -512,6 +512,9 @@ td.money, th.money { text-align: right; }
 
 .gallery__main {
     position: relative;
+    /* An <a> so the image is reachable without JS; it must still lay out as
+       the block the rest of these rules assume. */
+    display: block;
     background: var(--surface-2);
     border-radius: var(--radius);
     overflow: hidden;
@@ -1109,4 +1112,54 @@ td.money, th.money { text-align: right; }
     flex-basis: 100%;
     color: var(--ink-soft);
     margin: 0;
+}
+
+/* ---------------------------------------------------------------------------
+   Product detail — image lightbox
+   -------------------------------------------------------------------------- */
+
+/* The photo is the content; a panel drawn around it is just a lighter box
+   competing with it for attention. */
+.lightbox .modal-content {
+    background: transparent;
+    border: 0;
+}
+
+.lightbox__img {
+    display: block;
+    width: 100%;
+    /* contain, not cover: the square crop is right for the grid, but the point
+       of opening the picture is to see the whole of it. */
+    max-height: 82vh;
+    object-fit: contain;
+}
+
+.lightbox__close {
+    position: absolute;
+    top: .5rem;
+    right: .5rem;
+    z-index: 3;
+    padding: .75rem;
+    border-radius: 50%;
+    background-color: rgba(255, 255, 255, .85);
+}
+
+/* The controls sit on the photograph, which may be light or dark, so they
+   carry their own contrast instead of borrowing the backdrop's. */
+.lightbox .carousel-control-prev,
+.lightbox .carousel-control-next { width: 12%; }
+
+.lightbox .carousel-control-prev-icon,
+.lightbox .carousel-control-next-icon {
+    background-color: rgba(0, 0, 0, .45);
+    border-radius: 50%;
+    padding: 1rem;
+    background-size: 1.1rem;
+}
+
+.lightbox .carousel-indicators [data-bs-slide-to] {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    border: 1px solid rgba(0, 0, 0, .35);
 }

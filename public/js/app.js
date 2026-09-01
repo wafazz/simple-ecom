@@ -193,13 +193,24 @@
     if (gallery) {
         var main = $('.gallery__main', gallery);
         var mainImg = main ? $('img', main) : null;
+        var thumbs = $$('.gallery__thumb', gallery);
 
-        $$('.gallery__thumb', gallery).forEach(function (thumb) {
+        // Which image the main frame is showing. The lightbox opens on this one
+        // rather than always on the first, so it magnifies what was clicked.
+        var shown = 0;
+
+        thumbs.forEach(function (thumb, i) {
             thumb.addEventListener('click', function () {
                 if (!mainImg) return;
 
+                shown = i;
                 mainImg.src = thumb.dataset.full;
-                $$('.gallery__thumb', gallery).forEach(function (t) {
+
+                // The frame is an <a> to the full image; keep its target in step
+                // with the picture, or the no-JS fallback opens the wrong one.
+                if (main.tagName === 'A') main.href = thumb.dataset.full;
+
+                thumbs.forEach(function (t) {
                     t.classList.toggle('is-active', t === thumb);
                 });
             });
@@ -220,6 +231,56 @@
                 main.classList.remove('is-zoomed');
                 mainImg.style.transformOrigin = 'center';
             });
+        }
+
+        /* Lightbox — click the frame for the full image, swipe or arrow through
+           the rest. Bootstrap's modal and carousel are already in the bundle the
+           navbar needs, so this costs no new dependency (spec §30). */
+
+        var lightbox = document.getElementById('galleryModal');
+        var carousel = document.getElementById('galleryCarousel');
+
+        if (main && lightbox && window.bootstrap) {
+            // Jump by moving the active classes, NOT with carousel.to(). The
+            // modal is still display:none at this point, so a sliding transition
+            // never fires its transitionend and the carousel latches shut.
+            var jumpTo = function (index) {
+                if (!carousel) return;
+
+                $$('.carousel-item', carousel).forEach(function (item, i) {
+                    item.classList.toggle('active', i === index);
+                });
+
+                $$('.carousel-indicators button', carousel).forEach(function (dot, i) {
+                    dot.classList.toggle('active', i === index);
+                    if (i === index) dot.setAttribute('aria-current', 'true');
+                    else dot.removeAttribute('aria-current');
+                });
+            };
+
+            var rider = function () {
+                return bootstrap.Carousel.getOrCreateInstance(carousel, { interval: false });
+            };
+
+            main.addEventListener('click', function (e) {
+                e.preventDefault();
+                jumpTo(shown);
+
+                // Build the instance now so swipe is live on the first slide,
+                // not only after someone has pressed an arrow.
+                if (carousel) rider();
+
+                bootstrap.Modal.getOrCreateInstance(lightbox).show();
+            });
+
+            // The carousel's own key handler needs focus inside it; the modal
+            // holds focus instead, so listen where the keys actually land.
+            if (carousel) {
+                lightbox.addEventListener('keydown', function (e) {
+                    if (e.key === 'ArrowRight') rider().next();
+                    else if (e.key === 'ArrowLeft') rider().prev();
+                });
+            }
         }
     }
 

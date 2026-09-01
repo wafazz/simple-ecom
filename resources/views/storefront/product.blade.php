@@ -27,9 +27,13 @@
                 <div class="gallery__placeholder"><i class="bi bi-image" aria-hidden="true"></i></div>
             @else
                 <div class="gallery" data-gallery>
-                    <div class="gallery__main">
+                    {{-- A real link to the full image, so a click still shows it
+                         with JavaScript off. app.js takes the click over and
+                         opens the lightbox instead. --}}
+                    <a class="gallery__main" href="{{ $gallery[0] }}"
+                       data-gallery-open aria-label="View {{ $product->name }} larger">
                         <img src="{{ $gallery[0] }}" alt="{{ $product->name }}">
-                    </div>
+                    </a>
 
                     @if (count($gallery) > 1)
                         <div class="gallery__thumbs">
@@ -211,6 +215,58 @@
             </div>
         </div>
     </div>
+
+    @if ($gallery !== [])
+        {{-- Outside the .row on purpose: a modal inside the sticky gallery
+             column is one CSS change away from being clipped by it. --}}
+        <div class="modal fade lightbox" id="galleryModal" tabindex="-1"
+             aria-labelledby="galleryModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-xl">
+                <div class="modal-content">
+                    <h2 class="visually-hidden" id="galleryModalLabel">{{ $product->name }}</h2>
+
+                    <button type="button" class="btn-close lightbox__close"
+                            data-bs-dismiss="modal" aria-label="Close"></button>
+
+                    {{-- No data-bs-ride, and interval false: a product photo that
+                         slides away on its own is worse than one that sits still. --}}
+                    <div id="galleryCarousel" class="carousel slide" data-bs-interval="false">
+                        <div class="carousel-inner">
+                            @foreach ($gallery as $i => $url)
+                                <div class="carousel-item {{ $i === 0 ? 'active' : '' }}">
+                                    <img src="{{ $url }}" class="lightbox__img"
+                                         alt="{{ $product->name }} — image {{ $i + 1 }} of {{ count($gallery) }}">
+                                </div>
+                            @endforeach
+                        </div>
+
+                        @if (count($gallery) > 1)
+                            <button class="carousel-control-prev" type="button"
+                                    data-bs-target="#galleryCarousel" data-bs-slide="prev">
+                                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                                <span class="visually-hidden">Previous image</span>
+                            </button>
+                            <button class="carousel-control-next" type="button"
+                                    data-bs-target="#galleryCarousel" data-bs-slide="next">
+                                <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                                <span class="visually-hidden">Next image</span>
+                            </button>
+
+                            <div class="carousel-indicators">
+                                @foreach ($gallery as $i => $url)
+                                    <button type="button" data-bs-target="#galleryCarousel"
+                                            data-bs-slide-to="{{ $i }}"
+                                            class="{{ $i === 0 ? 'active' : '' }}"
+                                            @if ($i === 0) aria-current="true" @endif
+                                            aria-label="Image {{ $i + 1 }}"></button>
+                                @endforeach
+                            </div>
+                        @endif
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
 @endsection
 
 @push('scripts')
