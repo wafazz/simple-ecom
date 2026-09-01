@@ -743,6 +743,50 @@ td.money, th.money { text-align: right; }
 
 .summary-row span:last-child { font-variant-numeric: tabular-nums; }
 
+/* ---------------------------------------------------------------------------
+   Cart line
+
+   The price used to be a third flex column, beside a column carrying BOTH the
+   product name and the quantity controls. Neither could give: the stepper plus
+   Update is 204px that cannot wrap, and .money is nowrap, so the row had a hard
+   floor of ~435px. Below that the price was pushed out through the right edge
+   of the card — 125px past it on a 320px screen.
+
+   The markup asked for min-width:0 with a `min-w-0` class, but that is a
+   Tailwind utility and Bootstrap has never shipped it, so the class did nothing
+   and min-width stayed `auto`.
+
+   The price now sits beside the NAME, which wraps freely, and the controls take
+   the full width beneath it. On a wide screen this puts the price exactly where
+   it has always been.
+   -------------------------------------------------------------------------- */
+
+.cart-line__body {
+    flex: 1 1 auto;
+    /* A flex item's min-width defaults to auto, not 0 — without this it cannot
+       shrink below the widest thing inside it. */
+    min-width: 0;
+}
+
+.cart-line__head {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: .25rem .75rem;
+}
+
+/* 9rem is the point at which the price drops to its own line instead of
+   crushing the product name into a column one word wide. */
+.cart-line__title { flex: 1 1 9rem; min-width: 9rem; }
+
+/* margin-left keeps it right-aligned on the wide layout AND once it has
+   wrapped onto a line of its own. */
+.cart-line__price {
+    flex: 0 0 auto;
+    margin-left: auto;
+    text-align: right;
+}
+
 .line-thumb {
     width: 64px;
     height: 64px;
