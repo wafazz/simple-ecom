@@ -127,6 +127,32 @@ class Order extends Model
     }
 
     /**
+     * May the delivery and contact details still be corrected by hand?
+     *
+     * New Order only. That is the window where the money has settled (or the
+     * order was approved by hand) but nothing has been picked or posted, so
+     * fixing an address the customer mistyped costs nothing.
+     *
+     * Paid is NOT required: approve() can put an unpaid order into New Order,
+     * and a wrong address on one of those is just as worth correcting.
+     *
+     * False once a shipment exists. The AWB is printed with the address it was
+     * booked against, so editing the row afterwards does not redirect the
+     * parcel — it only makes the label and the record disagree, which is worse
+     * than the typo.
+     *
+     * This does NOT re-quote the shipping fee. A postcode edit that crosses to
+     * another state leaves the customer charged what they were originally
+     * quoted; the screen says so, because the alternative is charging a
+     * different amount after the card has been taken.
+     */
+    public function canEditDetails(): bool
+    {
+        return $this->order_status === OrderStatus::NewOrder
+            && $this->shipment === null;
+    }
+
+    /**
      * Idempotent paid transition — Planning §11.A.5.
      *
      * Returns true only for the FIRST caller. A duplicate ToyyibPay callback

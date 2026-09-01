@@ -6,6 +6,7 @@ use App\Enums\Courier;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\OrderDetailsRequest;
 use App\Models\Order;
 use App\Services\EasyParcelService;
 use Illuminate\Http\RedirectResponse;
@@ -68,6 +69,52 @@ class OrderController extends Controller
             'easyparcelConnected' => EasyParcelService::fromConfig()->isConnected(),
             'couriers' => Courier::options(),
         ]);
+    }
+
+    /**
+     * Correct the delivery and contact details of a New Order.
+     *
+     * Contents and money are not editable here and are not meant to be: the
+     * amount has already been collected, so changing a line would leave the
+     * order disagreeing with what the customer actually paid.
+     */
+    public function edit(Order $order): View
+    {
+        abort_unless($order->canEditDetails(), 403);
+
+        return view('admin.orders.edit', [
+            'order' => $order,
+            'states' => config('shop.states'),
+        ]);
+    }
+
+    public function updateDetails(OrderDetailsRequest $request, Order $order): RedirectResponse
+    {
+        // Guarded UPDATE, not check-then-write — the same reason as approve().
+        // The order can move between this form being opened and submitted: a
+        // status change in another tab, or a shipment booked, either of which
+        // must beat the edit rather than be silently overwritten by it.
+        $saved = Order::query()
+            ->whereKey($order->id)
+            ->where('order_status', OrderStatus::NewOrder->value)
+            ->whereDoesntHave('shipment')
+            ->update($request->validated() + ['updated_at' => now()]);
+
+        if ($saved !== 1) {
+            return back()
+                ->withInput()
+                ->with('error', 'That order has moved on or has a shipment booked, so the details were not changed.');
+        }
+
+        Log::info('Admin edited order delivery details', [
+            'order_no' => $order->order_no,
+            'user_id' => $request->user()?->id,
+            'fields' => array_keys($request->validated()),
+        ]);
+
+        return redirect()
+            ->route('admin.orders.show', $order)
+            ->with('status', "Delivery details updated for {$order->order_no}. The shipping fee was not re-quoted.");
     }
 
     /**

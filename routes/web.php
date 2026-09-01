@@ -151,6 +151,14 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
         Route::get('/orders/{order:id}', [OrderController::class, 'show'])->name('orders.show');
         Route::patch('/orders/{order:id}/status', [OrderController::class, 'updateStatus'])->name('orders.status');
 
+        // Correcting a mistyped delivery address on a New Order. Contents and
+        // totals are not editable — the money has already been collected.
+        // The PATCH is suffixed rather than bare so it cannot ever be confused
+        // with the literal PATCH /orders/process above.
+        Route::get('/orders/{order:id}/edit', [OrderController::class, 'edit'])->name('orders.edit');
+        Route::patch('/orders/{order:id}/details', [OrderController::class, 'updateDetails'])
+            ->name('orders.details');
+
         Route::patch('/orders/{order:id}/refund', [OrderController::class, 'markRefunded'])->name('orders.refund');
 
         // Row actions for an order that has not been paid for.

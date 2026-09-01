@@ -131,7 +131,18 @@
             </div>
 
             <div class="card mb-3">
-                <div class="card-header">Customer</div>
+                <div class="card-header d-flex align-items-center justify-content-between gap-2">
+                    <span>Customer</span>
+                    {{-- New Order only, and gone once a shipment exists: the AWB
+                         is already printed with the address it was booked
+                         against. Order::canEditDetails() carries the reasoning. --}}
+                    @if ($order->canEditDetails())
+                        <a href="{{ route('admin.orders.edit', $order) }}"
+                           class="btn btn-outline-secondary btn-sm">
+                            Edit customer &amp; address
+                        </a>
+                    @endif
+                </div>
                 <div class="card-body">
                     <p class="mb-1">{{ $order->customer_name }}</p>
                     <p class="mb-1 text-muted small">{{ $order->customer_email }}</p>
