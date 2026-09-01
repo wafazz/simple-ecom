@@ -59,7 +59,7 @@
                 </p>
 
                 @if ($product->description)
-                    <p class="buy-panel__desc">{{ $product->description }}</p>
+                    <p class="buy-panel__desc">{!! nl2br(e($product->description)) !!}</p>
                 @endif
 
                 {{-- The picker upgrades this form. Without JavaScript the
